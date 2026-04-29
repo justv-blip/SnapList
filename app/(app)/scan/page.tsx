@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Scanner from "@/components/Scanner";
 
-export default function ScanPage() {
+function ScanContent() {
   const params = useSearchParams();
   const batchId = params.get("batch") || undefined;
 
@@ -21,5 +22,13 @@ export default function ScanPage() {
       </div>
       <Scanner batchId={batchId} />
     </div>
+  );
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense>
+      <ScanContent />
+    </Suspense>
   );
 }
