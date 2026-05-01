@@ -51,12 +51,6 @@ export default function CameraScanner({ onCapture, busy }: Props) {
         });
 
         streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-
         setCameraState("active");
       } catch (err: any) {
         console.error("[camera]", err);
@@ -94,6 +88,16 @@ export default function CameraScanner({ onCapture, busy }: Props) {
     }
     setCameraState("idle");
   }, []);
+
+  // Attach stream to video element once it's in the DOM
+  useEffect(() => {
+    if (cameraState === "active" && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch((err) => {
+        console.error("[camera] play error", err);
+      });
+    }
+  }, [cameraState]);
 
   // Cleanup on unmount
   useEffect(() => {
