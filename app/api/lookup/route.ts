@@ -5,14 +5,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lookupCard } from "@/lib/tcgApis";
 import { requireAuth, authErrorResponse } from "@/lib/supabase/api-auth";
+import { recordPrice } from "@/lib/priceHistory";
 import { sanitizeString, isValidGame, MAX_PAYLOAD } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   // Auth check — lookups don't cost scan credits but require login
+  let auth;
   try {
-    await requireAuth(req);
+    auth = await requireAuth(req);
   } catch (err) {
     return authErrorResponse(err);
   }
@@ -51,6 +53,17 @@ export async function POST(req: NextRequest) {
       found: false,
       match: null,
       note: "No match found. You can still list it — enter the details manually."
+    });
+  }
+
+  // Record price for history (best-effort, non-blocking)
+  if (hit.marketPriceUsd && hit.marketPriceUsd > 0) {
+    recordPrice(auth.supabase, auth.user.id, {
+      game: hit.game,
+      name: hit.name,
+      setName: hit.setName,
+      priceUsd: hit.marketPriceUsd,
+      source: "lookup",
     });
   }
 

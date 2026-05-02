@@ -363,6 +363,57 @@ export async function bulkCreateListings(
 }
 
 // ---------------------------------------------------------------------------
+// Get active eBay listings (for repricing tool)
+// ---------------------------------------------------------------------------
+
+export interface ActiveListing {
+  offerId: string;
+  sku: string;
+  title: string;
+  currentPrice: number;
+  quantity: number;
+  listingId?: string;
+  cardName?: string;
+  game?: string;
+  setName?: string;
+}
+
+export async function getActiveListings(userId: string): Promise<ActiveListing[]> {
+  try {
+    const res = await ebayFetch(
+      userId,
+      "/sell/inventory/v1/offer?marketplace_id=EBAY_US&limit=200"
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const offers: any[] = data.offers || [];
+
+    return offers
+      .filter((o) => o.status === "PUBLISHED" || o.pricingSummary?.price?.value)
+      .map((o) => {
+        const price = parseFloat(o.pricingSummary?.price?.value ?? "0");
+        // Try to extract card name from SKU (format: tcg-{uuid} or custom)
+        const skuParts = (o.sku || "").split("-");
+        const cardName = o.product?.title?.split(" — ")?.[0] || o.sku;
+
+        return {
+          offerId: o.offerId,
+          sku: o.sku || "",
+          title: o.product?.title || o.sku || "Unknown",
+          currentPrice: price,
+          quantity: o.availableQuantity || 1,
+          listingId: o.listing?.listingId,
+          cardName,
+          game: undefined, // enriched server-side
+          setName: undefined,
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Get user's eBay fulfillment policies (for shipping/return/payment dropdowns)
 // ---------------------------------------------------------------------------
 

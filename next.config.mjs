@@ -63,9 +63,7 @@ const nextConfig = {
       { protocol: "https", hostname: "*.cloudfront.net" }
     ]
   },
-  experimental: {
-    serverComponentsExternalPackages: ["@anthropic-ai/sdk"]
-  }
+  serverExternalPackages: ["@anthropic-ai/sdk"]
 };
 
 // Sentry wraps the config to instrument server/edge/client bundles.

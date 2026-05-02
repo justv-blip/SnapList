@@ -20,6 +20,7 @@ import {
   Info,
 } from "lucide-react";
 import { MarketAnalysisPanel } from "@/components/MarketAnalysis";
+import { EbayRepricingTool } from "@/components/EbayRepricingTool";
 
 type ToolTab = "ebay" | "tcgplayer" | "market";
 
@@ -177,35 +178,43 @@ export default function ToolsPage() {
 
       {/* eBay Tools */}
       {activeTab === "ebay" && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ToolCard
-            icon={RefreshCcw}
-            title="Inventory Sync"
-            description="Sync your scanned inventory with your eBay active listings. Automatically update quantities, prices, and end listings for sold items. Keeps your eBay store in sync with your scanned collection."
-            status="coming-soon"
-            action="Sync Inventory"
-          />
-          <ToolCard
-            icon={Tags}
-            title="Offers Management"
-            description="View and respond to Best Offer submissions across all your listings. Accept, decline, or counter offers in bulk. Set auto-accept and auto-decline thresholds per listing or globally."
-            status="coming-soon"
-            action="Manage Offers"
-          />
-          <ToolCard
-            icon={MessageSquare}
-            title="Buyer Messaging"
-            description="Centralized inbox for buyer messages across all your eBay listings. Send shipping updates, answer questions, and manage communication without switching to eBay's message center."
-            status="coming-soon"
-            action="Open Messages"
-          />
-          <ToolCard
-            icon={Layers}
-            title="Combine Duplicates"
-            description="Detect duplicate listings across your eBay store and merge them into multi-quantity listings. Reduces listing fees and simplifies inventory management. Preview changes before applying."
-            status="coming-soon"
-            action="Find Duplicates"
-          />
+        <div className="space-y-4">
+          {/* Live repricing tool */}
+          <div className="card-panel">
+            <EbayRepricingTool />
+          </div>
+
+          {/* Coming-soon tools */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ToolCard
+              icon={Tags}
+              title="Offers Management"
+              description="View and respond to Best Offer submissions across all your listings. Accept, decline, or counter offers in bulk. Set auto-accept and auto-decline thresholds per listing or globally."
+              status="coming-soon"
+              action="Manage Offers"
+            />
+            <ToolCard
+              icon={MessageSquare}
+              title="Buyer Messaging"
+              description="Centralized inbox for buyer messages across all your eBay listings. Send shipping updates, answer questions, and manage communication without switching to eBay's message center."
+              status="coming-soon"
+              action="Open Messages"
+            />
+            <ToolCard
+              icon={Layers}
+              title="Combine Duplicates"
+              description="Detect duplicate listings across your eBay store and merge them into multi-quantity listings. Reduces listing fees and simplifies inventory management. Preview changes before applying."
+              status="coming-soon"
+              action="Find Duplicates"
+            />
+            <ToolCard
+              icon={RefreshCcw}
+              title="Inventory Sync"
+              description="Sync your scanned inventory with your eBay active listings. Automatically update quantities and end listings for sold items. Keeps your eBay store in sync with your scanned collection."
+              status="coming-soon"
+              action="Sync Inventory"
+            />
+          </div>
         </div>
       )}
 

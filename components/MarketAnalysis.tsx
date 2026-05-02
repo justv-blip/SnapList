@@ -12,6 +12,15 @@ import {
   AlertCircle,
   ArrowRight,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import type { MarketAnalysis, MarketSignal, TrendDirection } from "@/lib/marketAnalysis";
 
 const SIGNAL_META: Record<MarketSignal, { label: string; color: string; bg: string }> = {
@@ -147,6 +156,55 @@ export function MarketAnalysisPanel({
               />
             </div>
           )}
+
+          {/* Price history chart */}
+          {result.priceHistory.length > 1 ? (
+            <div className="p-3 rounded-xl bg-panel2 border border-border">
+              <p className="text-[10px] text-muted uppercase tracking-wider font-medium mb-3">
+                Price History
+              </p>
+              <ResponsiveContainer width="100%" height={140}>
+                <LineChart data={result.priceHistory} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#243049" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: "#9aa7bd" }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "#9aa7bd" }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `$${v.toFixed(0)}`}
+                    width={48}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: "#121826", border: "1px solid #243049", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "#9aa7bd" }}
+                    labelFormatter={(d) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    formatter={(v) => [`$${Number(v).toFixed(2)}`, "Price"]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="price"
+                    stroke="#7c9cff"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: "#7c9cff" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : result.priceHistory.length <= 1 && result.currentPrice > 0 ? (
+            <div className="p-3 rounded-xl bg-panel2 border border-border text-center">
+              <p className="text-xs text-muted">
+                Price history will build up here as you scan and look up this card over time.
+              </p>
+            </div>
+          ) : null}
 
           {/* External links */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-panel2 border border-border">

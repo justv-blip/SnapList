@@ -11,6 +11,7 @@ import { identifyCard, isVisionEnabled, type ScanHints } from "@/lib/vision";
 import { lookupCard } from "@/lib/tcgApis";
 import type { ScanResult, VisionGuess } from "@/lib/types";
 import { requireAuth, checkScanLimit, commitScanUsage, AuthError, authErrorResponse } from "@/lib/supabase/api-auth";
+import { recordPrice } from "@/lib/priceHistory";
 import { MAX_PAYLOAD } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 
@@ -117,6 +118,20 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
       log.error("failed to commit scan usage", { userId: auth.user.id, message: err?.message });
       // Don't fail the request — scans already completed
+    }
+  }
+
+  // Record prices for market analysis history (best-effort, non-blocking)
+  for (const result of results) {
+    const card = (result as any).matchedCard;
+    if (card?.marketPriceUsd && card.marketPriceUsd > 0) {
+      recordPrice(auth.supabase, auth.user.id, {
+        game: card.game,
+        name: card.name,
+        setName: card.setName,
+        priceUsd: card.marketPriceUsd,
+        source: "scan",
+      });
     }
   }
 

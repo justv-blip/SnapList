@@ -3,13 +3,15 @@ import { computeSignal, trendFromChange, type MarketAnalysis } from "@/lib/marke
 import { lookupCard } from "@/lib/tcgApis";
 import { requireAuth, authErrorResponse } from "@/lib/supabase/api-auth";
 import { sanitizeString, isValidGame } from "@/lib/validation";
+import { recordPrice, getPriceTrend } from "@/lib/priceHistory";
 import type { Game } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  let auth;
   try {
-    await requireAuth(req);
+    auth = await requireAuth(req);
   } catch (err) {
     return authErrorResponse(err);
   }
@@ -27,18 +29,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch current market price via the same lookup pipeline used during scanning.
+    // Fetch current market price
     const hit = await lookupCard({ game, name: cardName, setName });
     const currentPrice = hit?.marketPriceUsd ?? 0;
 
-    // We only have a single current price point — no historical data yet.
-    // Treat current price as both the 30-day and 90-day average, which means
-    // all change percentages are 0 and the trend is stable.
-    // This is honest: we have real price data, but no history to compute trends from.
-    const avg30d = currentPrice;
-    const avg90d = currentPrice;
-    const change7d = 0;
-    const change30d = 0;
+    // Record this observation to price_history (best-effort)
+    if (currentPrice > 0) {
+      recordPrice(auth.supabase, auth.user.id, {
+        game,
+        name: hit?.name ?? cardName,
+        setName: hit?.setName ?? setName,
+        priceUsd: currentPrice,
+        source: "market-analysis",
+      });
+    }
+
+    // Fetch historical trend data from price_history table
+    const trend = await getPriceTrend(
+      auth.supabase,
+      auth.user.id,
+      game,
+      hit?.name ?? cardName,
+      hit?.setName ?? setName
+    );
+
+    const avg30d = trend?.avg30d ?? currentPrice;
+    const avg90d = trend?.avg90d ?? currentPrice;
+    const change7d = trend?.change7dPct ?? 0;
+    const change30d = trend?.change30dPct ?? 0;
 
     const { signal, confidence, reasoning } = computeSignal(
       currentPrice,
@@ -48,10 +66,19 @@ export async function POST(req: NextRequest) {
       change30d
     );
 
-    // Enrich the reasoning with a note about data availability.
+    const hasHistory = (trend?.history?.length ?? 0) > 1;
+
     const enrichedReasoning = currentPrice > 0
-      ? `Current market price: $${currentPrice.toFixed(2)}. ${reasoning} Price history and trend data are on the roadmap.`
+      ? hasHistory
+        ? reasoning
+        : `Current market price: $${currentPrice.toFixed(2)}. ${reasoning} Price history will build up as you scan and look up cards.`
       : "No market price found for this card. Try searching with the exact card name and set.";
+
+    // Map internal PricePoint to MarketDataPoint shape
+    const priceHistory = (trend?.history ?? []).map((p) => ({
+      date: p.date.slice(0, 10), // ISO date only
+      price: p.price,
+    }));
 
     return NextResponse.json({
       cardName: hit?.name ?? cardName,
@@ -67,7 +94,7 @@ export async function POST(req: NextRequest) {
       signal: currentPrice > 0 ? signal : "hold",
       signalConfidence: currentPrice > 0 ? confidence : 0,
       signalReasoning: enrichedReasoning,
-      priceHistory: [],
+      priceHistory,
       source: "internal",
       lastUpdated: new Date().toISOString(),
     } satisfies MarketAnalysis);

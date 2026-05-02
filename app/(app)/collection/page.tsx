@@ -19,16 +19,18 @@ import {
   ExternalLink,
   Award,
   ShieldCheck,
+  Copy,
 } from "lucide-react";
 import { getAllBatches, type Batch } from "@/lib/supabaseStore";
 import type { ScannedCard, Game, Condition } from "@/lib/types";
 import { GAME_LABELS, CONDITIONS, GRADING_COMPANY_LABELS } from "@/lib/types";
 import { useToast } from "@/components/Toast";
 import { BatchSkeleton } from "@/components/Skeleton";
+import { detectDuplicates, type DuplicateGroup } from "@/lib/duplicates";
 
 // ── Types ──
 
-type ViewMode = "grid" | "list";
+type ViewMode = "grid" | "list" | "duplicates";
 type SortField = "name" | "price" | "date" | "game";
 type SortDir = "asc" | "desc";
 
@@ -84,6 +86,18 @@ export default function CollectionPage() {
     }
     return cards;
   }, [batches]);
+
+  // Build a lookup map: card id -> CardWithBatch (for enriching duplicate groups)
+  const cardById = useMemo(() => {
+    const map = new Map<string, CardWithBatch>();
+    for (const c of allCards) {
+      map.set(c.id, c);
+    }
+    return map;
+  }, [allCards]);
+
+  // Compute duplicate groups (client-side, derived from allCards)
+  const duplicateGroups = useMemo(() => detectDuplicates(allCards), [allCards]);
 
   // Filtered cards
   const filtered = useMemo(() => {
@@ -213,150 +227,170 @@ export default function CollectionPage() {
           >
             <List className="w-4 h-4" />
           </button>
-        </div>
-      </div>
-
-      {/* Search + Filter bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-          <input
-            className="input pl-10"
-            placeholder="Search by name, set, number, or batch..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-        <button
-          className={`btn ${activeFilterCount > 0 ? "border-accent/50 text-accent" : ""}`}
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          <Filter className="w-4 h-4" />
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-1 w-5 h-5 rounded-full bg-accent text-black text-[10px] font-bold flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Filter panel */}
-      {showFilters && (
-        <div className="card-panel p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-muted uppercase tracking-wider">Filters</span>
-            {activeFilterCount > 0 && (
-              <button onClick={clearFilters} className="text-xs text-accent hover:underline">
-                Clear all
-              </button>
+          <button
+            className={`btn gap-1.5 text-xs ${view === "duplicates" ? "border-accent/50 text-accent" : ""}`}
+            onClick={() => setView("duplicates")}
+            title="Duplicates view"
+          >
+            <Copy className="w-4 h-4" />
+            Duplicates
+            {duplicateGroups.length > 0 && (
+              <span className="ml-0.5 w-5 h-5 rounded-full bg-accent text-black text-[10px] font-bold flex items-center justify-center">
+                {duplicateGroups.length}
+              </span>
             )}
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="label">Game</label>
-              <select
-                className="input mt-1"
-                value={filterGame}
-                onChange={(e) => setFilterGame(e.target.value as Game | "")}
-              >
-                <option value="">All games</option>
-                {gamesPresent.map((g) => (
-                  <option key={g} value={g}>
-                    {GAME_LABELS[g as Game] || g}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Condition</label>
-              <select
-                className="input mt-1"
-                value={filterCondition}
-                onChange={(e) => setFilterCondition(e.target.value as Condition | "")}
-              >
-                <option value="">All conditions</option>
-                {CONDITIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Batch</label>
-              <select
-                className="input mt-1"
-                value={filterBatch}
-                onChange={(e) => setFilterBatch(e.target.value)}
-              >
-                <option value="">All batches</option>
-                {batches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name} ({b.cards.length})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Foil</label>
-              <select
-                className="input mt-1"
-                value={filterFoil}
-                onChange={(e) => setFilterFoil(e.target.value as "" | "yes" | "no")}
-              >
-                <option value="">Any</option>
-                <option value="yes">Foil only</option>
-                <option value="no">Non-foil only</option>
-              </select>
-            </div>
-            <div>
-              <label className="label">Graded</label>
-              <select
-                className="input mt-1"
-                value={filterGraded}
-                onChange={(e) => setFilterGraded(e.target.value as "" | "yes" | "no")}
-              >
-                <option value="">Any</option>
-                <option value="yes">Graded only</option>
-                <option value="no">Raw only</option>
-              </select>
-            </div>
-          </div>
+          </button>
         </div>
+      </div>
+
+      {/* Search + Filter bar — hidden in duplicates view */}
+      {view !== "duplicates" && (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+              <input
+                className="input pl-10"
+                placeholder="Search by name, set, number, or batch..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <button
+              className={`btn ${activeFilterCount > 0 ? "border-accent/50 text-accent" : ""}`}
+              onClick={() => setShowFilters((v) => !v)}
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-accent text-black text-[10px] font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div className="card-panel p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium text-muted uppercase tracking-wider">Filters</span>
+                {activeFilterCount > 0 && (
+                  <button onClick={clearFilters} className="text-xs text-accent hover:underline">
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div>
+                  <label className="label">Game</label>
+                  <select
+                    className="input mt-1"
+                    value={filterGame}
+                    onChange={(e) => setFilterGame(e.target.value as Game | "")}
+                  >
+                    <option value="">All games</option>
+                    {gamesPresent.map((g) => (
+                      <option key={g} value={g}>
+                        {GAME_LABELS[g as Game] || g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Condition</label>
+                  <select
+                    className="input mt-1"
+                    value={filterCondition}
+                    onChange={(e) => setFilterCondition(e.target.value as Condition | "")}
+                  >
+                    <option value="">All conditions</option>
+                    {CONDITIONS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Batch</label>
+                  <select
+                    className="input mt-1"
+                    value={filterBatch}
+                    onChange={(e) => setFilterBatch(e.target.value)}
+                  >
+                    <option value="">All batches</option>
+                    {batches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.cards.length})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Foil</label>
+                  <select
+                    className="input mt-1"
+                    value={filterFoil}
+                    onChange={(e) => setFilterFoil(e.target.value as "" | "yes" | "no")}
+                  >
+                    <option value="">Any</option>
+                    <option value="yes">Foil only</option>
+                    <option value="no">Non-foil only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Graded</label>
+                  <select
+                    className="input mt-1"
+                    value={filterGraded}
+                    onChange={(e) => setFilterGraded(e.target.value as "" | "yes" | "no")}
+                  >
+                    <option value="">Any</option>
+                    <option value="yes">Graded only</option>
+                    <option value="no">Raw only</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sort bar */}
+          <div className="flex items-center gap-1 text-xs text-muted">
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            <span>Sort:</span>
+            {(["date", "name", "price", "game"] as SortField[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => toggleSort(f)}
+                className={`px-2 py-1 rounded-md transition-colors ${
+                  sortField === f
+                    ? "bg-accent/10 text-accent font-medium"
+                    : "hover:bg-panel2 hover:text-white"
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+                {sortField === f && (sortDir === "asc" ? " ↑" : " ↓")}
+              </button>
+            ))}
+            <span className="ml-auto text-muted">
+              {sorted.length} result{sorted.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </>
       )}
 
-      {/* Sort bar */}
-      <div className="flex items-center gap-1 text-xs text-muted">
-        <ArrowUpDown className="w-3.5 h-3.5" />
-        <span>Sort:</span>
-        {(["date", "name", "price", "game"] as SortField[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => toggleSort(f)}
-            className={`px-2 py-1 rounded-md transition-colors ${
-              sortField === f
-                ? "bg-accent/10 text-accent font-medium"
-                : "hover:bg-panel2 hover:text-white"
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-            {sortField === f && (sortDir === "asc" ? " ↑" : " ↓")}
-          </button>
-        ))}
-        <span className="ml-auto text-muted">
-          {sorted.length} result{sorted.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      {/* Empty state */}
-      {allCards.length === 0 ? (
+      {/* ── Duplicates view ── */}
+      {view === "duplicates" ? (
+        <DuplicatesView groups={duplicateGroups} cardById={cardById} />
+      ) : allCards.length === 0 ? (
+        /* Empty state — no cards at all */
         <div className="card-panel flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mb-5">
             <Library className="w-8 h-8 text-accent" />
@@ -373,6 +407,7 @@ export default function CollectionPage() {
           </Link>
         </div>
       ) : sorted.length === 0 ? (
+        /* No results after filtering */
         <div className="card-panel flex flex-col items-center justify-center py-12 text-center">
           <Search className="w-8 h-8 text-muted mb-3" />
           <p className="text-sm text-muted">No cards match your search or filters.</p>
@@ -398,6 +433,159 @@ export default function CollectionPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Duplicates view ──
+
+function DuplicatesView({
+  groups,
+  cardById,
+}: {
+  groups: DuplicateGroup[];
+  cardById: Map<string, CardWithBatch>;
+}) {
+  if (groups.length === 0) {
+    return (
+      <div className="card-panel flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5">
+          <Copy className="w-8 h-8 text-green-400" />
+        </div>
+        <h2 className="text-lg font-semibold mb-2">No duplicates found</h2>
+        <p className="text-sm text-muted max-w-sm">
+          No duplicate cards were detected across your collection. Every card appears to be unique.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted">
+        {groups.length} duplicate group{groups.length !== 1 ? "s" : ""} detected across your collection
+      </p>
+      {groups.map((group, i) => (
+        <DuplicateGroupCard key={i} group={group} cardById={cardById} />
+      ))}
+    </div>
+  );
+}
+
+// ── Individual duplicate group panel ──
+
+function DuplicateGroupCard({
+  group,
+  cardById,
+}: {
+  group: DuplicateGroup;
+  cardById: Map<string, CardWithBatch>;
+}) {
+  const allGroupCards = [group.primary, ...group.duplicates];
+  const confidencePct = Math.round(group.confidence * 100);
+
+  // Determine if all cards live in the same batch
+  const batchIds = new Set(
+    allGroupCards.map((c) => cardById.get(c.id)?.batchId).filter(Boolean)
+  );
+  const crossBatch = batchIds.size > 1;
+
+  // Confidence badge colour
+  const badgeClass =
+    confidencePct >= 90
+      ? "bg-red-500/15 border-red-500/30 text-red-400"
+      : confidencePct >= 75
+      ? "bg-orange-500/15 border-orange-500/30 text-orange-400"
+      : "bg-yellow-500/15 border-yellow-500/30 text-yellow-400";
+
+  return (
+    <div className="card-panel p-0 overflow-hidden">
+      {/* Group header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-panel2/40">
+        <span
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeClass}`}
+        >
+          {confidencePct}% match
+        </span>
+        <span className="text-sm font-medium">{group.primary.name}</span>
+        <span className="text-xs text-muted ml-auto">
+          {allGroupCards.length} cop{allGroupCards.length !== 1 ? "ies" : "y"}
+        </span>
+      </div>
+
+      {/* Card rows */}
+      <div className="divide-y divide-border">
+        {allGroupCards.map((card, idx) => {
+          const enriched = cardById.get(card.id);
+          const batchName = enriched?.batchName ?? "Unknown batch";
+          const batchId = enriched?.batchId;
+
+          return (
+            <div key={card.id} className="flex items-center gap-4 px-4 py-3">
+              {/* Index pill */}
+              <span className="w-5 h-5 rounded-full bg-panel2 border border-border text-[10px] font-bold text-muted flex items-center justify-center shrink-0">
+                {idx + 1}
+              </span>
+
+              {/* Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium truncate">{card.name}</span>
+                  {card.foil && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
+                      Foil
+                    </span>
+                  )}
+                  {card.slabbed && card.grading && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                      <Award className="w-3 h-3" />
+                      {GRADING_COMPANY_LABELS[card.grading.company]} {card.grading.grade}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-muted flex-wrap">
+                  {card.setName && <span>{card.setName}</span>}
+                  {card.collectorNumber && <span>#{card.collectorNumber}</span>}
+                  {card.condition && <span>{card.condition}</span>}
+                  <span className="text-muted/60">·</span>
+                  <span className="text-accent/80">{batchName}</span>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="text-right shrink-0">
+                {card.marketPriceUsd != null && card.marketPriceUsd > 0 ? (
+                  <span className="text-sm font-semibold text-accent2">
+                    ${card.marketPriceUsd.toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted">—</span>
+                )}
+              </div>
+
+              {/* Link to batch */}
+              {batchId && (
+                <Link
+                  href={`/scan?batch=${batchId}`}
+                  className="shrink-0 text-muted hover:text-accent transition-colors"
+                  title="Open batch"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer note */}
+      <div className="px-4 py-2.5 border-t border-border bg-panel2/20">
+        <p className="text-[11px] text-muted">
+          {crossBatch
+            ? "These cards appear in different batches"
+            : "These cards appear in the same batch"}
+        </p>
+      </div>
     </div>
   );
 }
