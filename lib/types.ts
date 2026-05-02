@@ -15,6 +15,7 @@ export type Game =
   | "finalfantasy"
   | "unionarena"
   | "battlespirits"
+  | "riftbound"
   | "sports"
   | "other";
 
@@ -33,6 +34,7 @@ export const GAME_LABELS: Record<Game, string> = {
   finalfantasy: "Final Fantasy TCG",
   unionarena: "Union Arena",
   battlespirits: "Battle Spirits Saga",
+  riftbound: "Riftbound",
   sports: "Sports",
   other: "Other"
 };

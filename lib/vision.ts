@@ -28,7 +28,7 @@ const IDENTIFY_TOOL: Anthropic.Tool = {
         enum: [
           "pokemon", "mtg", "yugioh", "onepiece", "gundam", "vanguard",
           "digimon", "lorcana", "dragonball", "fleshandblood", "weissschwarz",
-          "finalfantasy", "unionarena", "battlespirits", "sports", "other"
+          "finalfantasy", "unionarena", "battlespirits", "riftbound", "sports", "other"
         ],
         description: "The TCG game this card belongs to. Omit or set null if unidentifiable."
       },
@@ -130,7 +130,13 @@ UNION ARENA: "UNION ARENA" text. Bandai logo. Various anime IP artwork (Bleach, 
 
 BATTLE SPIRITS SAGA: "BATTLE SPIRITS SAGA" text. Bandai logo. Core cost symbols. BP (Battle Power) stat. Card numbers BSS##-### format.
 
-SPORTS CARDS: Real athlete photos. Team logos. Year and manufacturer at bottom or back (Topps, Panini, Upper Deck, Fleer, Bowman). Stats on back. Rookie designation "RC" or "Rookie Card" symbol.
+RIFTBOUND (Runeterra Card Game): Based on the League of Legends / Runeterra universe. Champion and unit artwork featuring LoL characters (Jinx, Vi, Jayce, etc.). "RIFTBOUND" or "Runeterra" branding. Riot Games logo. Mana/power costs in colored region indicators (Demacia, Noxus, Freljord, etc.). Card numbers in format like RB-001.
+
+SPORTS CARDS: Real athlete photos with team uniforms/jerseys. Team logos. Year and manufacturer name at bottom or back (Topps, Panini, Upper Deck, Fleer, Bowman, Prizm, Select, Mosaic, Donruss, Score, Stadium Club). Rookie designation "RC" or "Rookie Card" symbol. Card number on front or back.
+- FOOTBALL (NFL/NCAA): Football action shots, NFL team logos, player position (QB, RB, WR, etc.), yard/touchdown stats
+- BASKETBALL (NBA/NCAA): Basketball action shots, NBA team logos, player position (PG, SG, SF, PF, C), points/assists/rebounds stats
+- BASEBALL (MLB/Minor League): Baseball action shots, MLB team logos, player position (P, C, 1B, SS, OF, etc.), ERA/batting average stats
+- SOCCER (MLS/international): Soccer action shots, club/national team crests, player position, international flag indicators, "autograph" or "relic" designations on premium cards
 
 LANGUAGE DETECTION:
 - Japanese: katakana/hiragana/kanji characters. Still try to provide the English card name if you know it (e.g. set name = "Surging Sparks" even if the card is Japanese).
@@ -155,7 +161,8 @@ const GAME_RETRY_HINTS: Partial<Record<Game, string>> = {
   onepiece: "Focus on the collector number at the bottom in OP##-### format (e.g. OP01-001). The cost circle is top-left. Check for Don!! cost value.",
   digimon: "Focus on the collector number at the bottom in BT#-### or EX#-### format (e.g. BT1-001). The play cost is top-left. Check for the Digimon level.",
   lorcana: "Focus on the bottom for the collector number. Check top-left for ink cost, and read the full card name which may include a subtitle after a dash.",
-  sports: "Focus on the card number (usually bottom of front or anywhere on back). Read the year, manufacturer (Topps, Panini, etc.), team name, and player name carefully.",
+  riftbound: "Focus on the card number (format RB-### or similar). Read the champion/unit name at the top. Check for region indicators (Demacia, Noxus, Freljord, Piltover, Shadow Isles, etc.) and the Riot Games / Riftbound branding.",
+  sports: "Focus on the card number (usually bottom of front or anywhere on back). Read the year, manufacturer (Topps, Panini, Upper Deck, Prizm, etc.), team name, and player name carefully. Identify the sport from the action photo and team logos.",
 };
 
 function buildRetryPrompt(first: VisionGuess, hints?: ScanHints): string {
@@ -342,7 +349,7 @@ export function parseVisionResponse(raw: string): VisionGuess {
 const VALID_GAMES: Game[] = [
   "pokemon", "mtg", "yugioh", "onepiece", "gundam", "vanguard",
   "digimon", "lorcana", "dragonball", "fleshandblood", "weissschwarz",
-  "finalfantasy", "unionarena", "battlespirits", "sports", "other",
+  "finalfantasy", "unionarena", "battlespirits", "riftbound", "sports", "other",
 ];
 
 function validGame(g: unknown): Game | null {
