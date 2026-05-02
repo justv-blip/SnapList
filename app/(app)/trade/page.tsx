@@ -8,19 +8,22 @@ import {
   Search,
   TrendingUp,
   TrendingDown,
-  Equal,
   AlertTriangle,
   DollarSign,
   CheckCircle2,
+  Loader2,
+  ImageIcon,
+  X,
 } from "lucide-react";
+import { GAME_LABELS, type Game } from "@/lib/types";
 
 interface TradeCard {
   id: string;
   name: string;
-  game: string;
+  game: Game;
   setName?: string;
-  marketPrice: number;
   imageUrl?: string;
+  marketPrice: number;
 }
 
 type TradeSide = "giving" | "receiving";
@@ -29,57 +32,105 @@ function uuid() {
   return crypto.randomUUID();
 }
 
+// Games to show in the selector — full list minus catch-alls
+const GAME_OPTIONS: Game[] = [
+  "pokemon", "mtg", "yugioh", "lorcana", "onepiece", "digimon",
+  "fleshandblood", "dragonball", "gundam", "vanguard", "weissschwarz",
+  "finalfantasy", "unionarena", "battlespirits", "riftbound", "sports",
+];
+
 export default function TradeAnalyzerPage() {
   const [giving, setGiving] = useState<TradeCard[]>([]);
   const [receiving, setReceiving] = useState<TradeCard[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [addingSide, setAddingSide] = useState<TradeSide | null>(null);
 
-  const givingTotal = useMemo(() => giving.reduce((sum, c) => sum + c.marketPrice, 0), [giving]);
-  const receivingTotal = useMemo(() => receiving.reduce((sum, c) => sum + c.marketPrice, 0), [receiving]);
+  // Dialog state
+  const [query, setQuery] = useState("");
+  const [selectedGame, setSelectedGame] = useState<Game>("pokemon");
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [foundCard, setFoundCard] = useState<Partial<TradeCard> | null>(null);
+  const [priceOverride, setPriceOverride] = useState<string>("");
+
+  const givingTotal = useMemo(() => giving.reduce((s, c) => s + c.marketPrice, 0), [giving]);
+  const receivingTotal = useMemo(() => receiving.reduce((s, c) => s + c.marketPrice, 0), [receiving]);
   const difference = receivingTotal - givingTotal;
-  const percentDiff = givingTotal > 0 ? ((difference / givingTotal) * 100) : 0;
+  const percentDiff = givingTotal > 0 ? (difference / givingTotal) * 100 : 0;
 
-  const addCard = useCallback(
-    (side: TradeSide) => {
-      setAddingSide(side);
-      setSearchQuery("");
-    },
-    []
-  );
+  const openDialog = useCallback((side: TradeSide) => {
+    setAddingSide(side);
+    setQuery("");
+    setSearchError(null);
+    setFoundCard(null);
+    setPriceOverride("");
+  }, []);
 
-  const submitCard = useCallback(() => {
-    if (!searchQuery.trim() || !addingSide) return;
+  const closeDialog = useCallback(() => {
+    setAddingSide(null);
+    setFoundCard(null);
+    setSearchError(null);
+  }, []);
+
+  const handleSearch = useCallback(async () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    setSearchError(null);
+    setFoundCard(null);
+
+    try {
+      const res = await fetch("/api/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game: selectedGame, name: query.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Lookup failed");
+
+      if (data.found && data.match) {
+        setFoundCard(data.match);
+        setPriceOverride(
+          data.match.marketPriceUsd != null
+            ? String(data.match.marketPriceUsd.toFixed(2))
+            : ""
+        );
+      } else {
+        // No catalog hit — still allow adding manually
+        setFoundCard({ name: query.trim(), game: selectedGame });
+        setPriceOverride("");
+      }
+    } catch (err: any) {
+      setSearchError(err?.message || "Could not look up card. Check your connection.");
+    } finally {
+      setSearching(false);
+    }
+  }, [query, selectedGame]);
+
+  const confirmAdd = useCallback(() => {
+    if (!foundCard || !addingSide) return;
+    const price = parseFloat(priceOverride) || 0;
     const card: TradeCard = {
       id: uuid(),
-      name: searchQuery.trim(),
-      game: "pokemon",
-      marketPrice: 0,
+      name: foundCard.name || query.trim(),
+      game: foundCard.game || selectedGame,
+      setName: foundCard.setName,
+      imageUrl: foundCard.imageUrl,
+      marketPrice: price,
     };
-    if (addingSide === "giving") {
-      setGiving((prev) => [...prev, card]);
-    } else {
-      setReceiving((prev) => [...prev, card]);
-    }
-    setAddingSide(null);
-    setSearchQuery("");
-  }, [searchQuery, addingSide]);
+    if (addingSide === "giving") setGiving((p) => [...p, card]);
+    else setReceiving((p) => [...p, card]);
+    closeDialog();
+  }, [foundCard, addingSide, priceOverride, query, selectedGame, closeDialog]);
 
-  const updatePrice = useCallback(
-    (side: TradeSide, id: string, price: number) => {
-      const setter = side === "giving" ? setGiving : setReceiving;
-      setter((prev) => prev.map((c) => (c.id === id ? { ...c, marketPrice: price } : c)));
-    },
-    []
-  );
+  const removeCard = useCallback((side: TradeSide, id: string) => {
+    const setter = side === "giving" ? setGiving : setReceiving;
+    setter((p) => p.filter((c) => c.id !== id));
+  }, []);
 
-  const removeCard = useCallback(
-    (side: TradeSide, id: string) => {
-      const setter = side === "giving" ? setGiving : setReceiving;
-      setter((prev) => prev.filter((c) => c.id !== id));
-    },
-    []
-  );
+  const updatePrice = useCallback((side: TradeSide, id: string, price: number) => {
+    const setter = side === "giving" ? setGiving : setReceiving;
+    setter((p) => p.map((c) => (c.id === id ? { ...c, marketPrice: price } : c)));
+  }, []);
 
   const verdict = useMemo(() => {
     if (giving.length === 0 && receiving.length === 0)
@@ -121,23 +172,20 @@ export default function TradeAnalyzerPage() {
 
       {/* Two-column trade layout */}
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Giving side */}
         <TradeSidePanel
           label="You Give"
           cards={giving}
           total={givingTotal}
-          onAdd={() => addCard("giving")}
+          onAdd={() => openDialog("giving")}
           onRemove={(id) => removeCard("giving", id)}
           onPriceChange={(id, p) => updatePrice("giving", id, p)}
           color="text-danger"
         />
-
-        {/* Receiving side */}
         <TradeSidePanel
           label="You Receive"
           cards={receiving}
           total={receivingTotal}
-          onAdd={() => addCard("receiving")}
+          onAdd={() => openDialog("receiving")}
           onRemove={(id) => removeCard("receiving", id)}
           onPriceChange={(id, p) => updatePrice("receiving", id, p)}
           color="text-accent2"
@@ -148,29 +196,127 @@ export default function TradeAnalyzerPage() {
       {addingSide && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="card-panel max-w-sm w-full mx-4 p-6 space-y-4">
-            <h3 className="font-semibold">
-              Add card to &ldquo;{addingSide === "giving" ? "You Give" : "You Receive"}&rdquo;
-            </h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-              <input
-                className="input pl-9"
-                placeholder="Card name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                onKeyDown={(e) => e.key === "Enter" && submitCard()}
-              />
-            </div>
-            <p className="text-xs text-muted">
-              Enter a card name and set the market price manually. Future updates will auto-lookup prices.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button className="btn" onClick={() => setAddingSide(null)}>Cancel</button>
-              <button className="btn-primary" onClick={submitCard} disabled={!searchQuery.trim()}>
-                Add Card
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">
+                Add to &ldquo;{addingSide === "giving" ? "You Give" : "You Receive"}&rdquo;
+              </h3>
+              <button onClick={closeDialog} className="text-muted hover:text-foreground">
+                <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Game selector */}
+            <div>
+              <label className="label text-xs mb-1">Game</label>
+              <select
+                className="input text-sm w-full"
+                value={selectedGame}
+                onChange={(e) => setSelectedGame(e.target.value as Game)}
+                disabled={!!foundCard}
+              >
+                {GAME_OPTIONS.map((g) => (
+                  <option key={g} value={g}>{GAME_LABELS[g]}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search input */}
+            {!foundCard && (
+              <>
+                <div>
+                  <label className="label text-xs mb-1">Card Name</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                    <input
+                      className="input pl-9 w-full"
+                      placeholder="e.g. Charizard ex, Lightning Bolt..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      autoFocus
+                      disabled={searching}
+                    />
+                  </div>
+                </div>
+
+                {searchError && (
+                  <p className="text-xs text-danger">{searchError}</p>
+                )}
+
+                <div className="flex gap-3 justify-end">
+                  <button className="btn" onClick={closeDialog}>Cancel</button>
+                  <button
+                    className="btn-primary"
+                    onClick={handleSearch}
+                    disabled={!query.trim() || searching}
+                  >
+                    {searching ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Looking up…</>
+                    ) : (
+                      <><Search className="w-4 h-4" /> Search</>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Result */}
+            {foundCard && (
+              <>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-panel2 border border-border">
+                  {foundCard.imageUrl ? (
+                    <img
+                      src={foundCard.imageUrl}
+                      alt={foundCard.name}
+                      className="w-12 h-16 object-contain rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-16 rounded bg-panel border border-border flex items-center justify-center shrink-0">
+                      <ImageIcon className="w-5 h-5 text-muted" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{foundCard.name}</p>
+                    {foundCard.setName && (
+                      <p className="text-xs text-muted truncate">{foundCard.setName}</p>
+                    )}
+                    <p className="text-xs text-muted">{GAME_LABELS[foundCard.game || selectedGame]}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label text-xs mb-1">
+                    Market Price (USD)
+                    {priceOverride === "" && (
+                      <span className="text-muted ml-1">— no price found, enter manually</span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="input pl-9 w-full"
+                      placeholder="0.00"
+                      value={priceOverride}
+                      onChange={(e) => setPriceOverride(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button className="btn" onClick={() => { setFoundCard(null); setSearchError(null); }}>
+                    Back
+                  </button>
+                  <button className="btn-primary" onClick={confirmAdd}>
+                    <Plus className="w-4 h-4" />
+                    Add Card
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -184,7 +330,7 @@ export default function TradeAnalyzerPage() {
         <p className="text-xs text-muted leading-relaxed">
           Market prices fluctuate — always check recent sales. A fair trade is within 5–10% of equal value.
           Consider card condition, rarity trends, and whether a card is rising or falling in price.
-          SnapList will automatically pull market prices in a future update.
+          Prices are pulled live from JustTCG and game-specific APIs — you can always adjust them manually.
         </p>
       </div>
     </div>
@@ -215,9 +361,7 @@ function TradeSidePanel({
         <span className="text-sm font-bold">${total.toFixed(2)}</span>
       </div>
       {cards.length === 0 ? (
-        <div className="text-center py-8 text-sm text-muted">
-          No cards added yet
-        </div>
+        <div className="text-center py-8 text-sm text-muted">No cards added yet</div>
       ) : (
         <div className="space-y-2 mb-4">
           {cards.map((card) => (
@@ -225,10 +369,16 @@ function TradeSidePanel({
               key={card.id}
               className="flex items-center gap-3 p-2 rounded-lg bg-panel2 border border-border"
             >
+              {card.imageUrl ? (
+                <img src={card.imageUrl} alt={card.name} className="w-8 h-11 object-contain rounded shrink-0" />
+              ) : (
+                <div className="w-8 h-11 bg-panel border border-border rounded shrink-0" />
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{card.name}</p>
+                {card.setName && <p className="text-[10px] text-muted truncate">{card.setName}</p>}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <DollarSign className="w-3 h-3 text-muted" />
                 <input
                   type="number"
@@ -240,10 +390,7 @@ function TradeSidePanel({
                   onChange={(e) => onPriceChange(card.id, parseFloat(e.target.value) || 0)}
                 />
               </div>
-              <button
-                onClick={() => onRemove(card.id)}
-                className="text-muted hover:text-danger transition-colors"
-              >
+              <button onClick={() => onRemove(card.id)} className="text-muted hover:text-danger transition-colors shrink-0">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
