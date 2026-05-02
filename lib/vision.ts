@@ -97,6 +97,7 @@ CARD BACK DETECTION — set isCardBack: true when:
 - MTG: shows the blue oval "Magic: The Gathering" design
 - Yu-Gi-Oh: shows the dark triangular swirl pattern
 - One Piece / Digimon / other Bandai: shows the generic game-logo back design
+- Sports cards: shows a stats table, career statistics, player bio, or team info WITHOUT a clear front-facing player photo as the primary subject. The back typically has rows of season stats (yards, touchdowns, ERA, points, etc.), birthdate, height/weight, and a card number. No large action photo.
 If isCardBack is true → set name to null, setCode to null, collectorNumber to null, confidence to 0.
 
 GAME IDENTIFICATION — use these visual cues:
