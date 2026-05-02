@@ -97,7 +97,7 @@ CARD BACK DETECTION — set isCardBack: true when:
 - MTG: shows the blue oval "Magic: The Gathering" design
 - Yu-Gi-Oh: shows the dark triangular swirl pattern
 - One Piece / Digimon / other Bandai: shows the generic game-logo back design
-- Sports cards: shows a stats table, career statistics, player bio, or team info WITHOUT a clear front-facing player photo as the primary subject. The back typically has rows of season stats (yards, touchdowns, ERA, points, etc.), birthdate, height/weight, and a card number. No large action photo.
+- Sports cards: shows a stats table, career statistics, player bio, or team info WITHOUT a large action/portrait photo as the primary subject. The back typically has rows of season stats (yards, touchdowns, ERA, points, win/loss record for UFC/MMA, etc.), birthdate, height/weight, brief bio paragraph, and a card number. Usually manufacturer legal text at the very bottom.
 If isCardBack is true → set name to null, setCode to null, collectorNumber to null, confidence to 0.
 
 GAME IDENTIFICATION — use these visual cues:
@@ -132,11 +132,33 @@ BATTLE SPIRITS SAGA: "BATTLE SPIRITS SAGA" text. Bandai logo. Core cost symbols.
 
 RIFTBOUND (Runeterra Card Game): Based on the League of Legends / Runeterra universe. Champion and unit artwork featuring LoL characters (Jinx, Vi, Jayce, etc.). "RIFTBOUND" or "Runeterra" branding. Riot Games logo. Mana/power costs in colored region indicators (Demacia, Noxus, Freljord, etc.). Card numbers in format like RB-001.
 
-SPORTS CARDS: Real athlete photos with team uniforms/jerseys. Team logos. Year and manufacturer name at bottom or back (Topps, Panini, Upper Deck, Fleer, Bowman, Prizm, Select, Mosaic, Donruss, Score, Stadium Club). Rookie designation "RC" or "Rookie Card" symbol. Card number on front or back.
-- FOOTBALL (NFL/NCAA): Football action shots, NFL team logos, player position (QB, RB, WR, etc.), yard/touchdown stats
-- BASKETBALL (NBA/NCAA): Basketball action shots, NBA team logos, player position (PG, SG, SF, PF, C), points/assists/rebounds stats
-- BASEBALL (MLB/Minor League): Baseball action shots, MLB team logos, player position (P, C, 1B, SS, OF, etc.), ERA/batting average stats
-- SOCCER (MLS/international): Soccer action shots, club/national team crests, player position, international flag indicators, "autograph" or "relic" designations on premium cards
+SPORTS CARDS: Real athlete/fighter photos. Licensed manufacturer branding is the primary identifier — look for it at the bottom or back of every card.
+
+MANUFACTURER BRANDS — always read the brand name, it is critical for the set name:
+- TOPPS: "Topps" wordmark or crown logo. Makes baseball (Topps Series 1/2, Topps Chrome, Bowman, Stadium Club, Allen & Ginter), UFC (Topps UFC), and more. Chrome versions have a reflective holographic finish.
+- PANINI: "Panini" or "panini america" wordmark. Makes football (Prizm, Select, Mosaic, Donruss, Score, Contenders, National Treasures), basketball (Prizm, Hoops, Crown Royale), soccer (Prizm, Chronicles), and more. Prizm cards have a rainbow prism border.
+- UPPER DECK: "Upper Deck" wordmark. Primarily hockey (Young Guns, SP Authentic, The Cup) and some basketball/baseball. Hologram sticker on back for authentication.
+- DONRUSS / SCORE: "Donruss" or "Score" (Panini brands). Football and baseball sets.
+- FLEER / SKYBOX: Older brands from 1980s–2000s. "Fleer" or "SkyBox" text.
+- LEAF: "Leaf" wordmark. Multi-sport autograph and memorabilia cards.
+- BOWMAN: "Bowman" (Topps brand). Baseball prospects and rookies. Chrome versions very common.
+
+SPORT IDENTIFICATION — identify the sport from the action photo AND team/league logos:
+- FOOTBALL (NFL/NCAA): Helmets, shoulder pads, football, NFL shield logo or NCAA branding, team wordmarks (Chiefs, Cowboys, Eagles, etc.), player position abbreviations (QB, RB, WR, TE, OL, DL, LB, CB, S)
+- BASKETBALL (NBA/NCAA): Basketball court, jersey numbers, NBA logo or NCAA, team names (Lakers, Celtics, Warriors, etc.), player position (PG, SG, SF, PF, C)
+- BASEBALL (MLB/MiLB): Baseball diamond, batting/pitching poses, MLB logo, team logos (Yankees, Dodgers, Cubs, etc.), player positions (P, C, 1B, 2B, 3B, SS, OF, DH)
+- SOCCER (MLS/EPL/international): Soccer pitch, cleats, club crests (Barcelona, Real Madrid, Man City, etc.) or national team crests, "La Liga" / "Premier League" / "Champions League" branding
+- UFC / MMA: Octagon cage background, UFC logo (red/black), fighter in MMA gloves and shorts, "UFC" wordmark prominently displayed, fighter record (W-L), weight class (Lightweight, Heavyweight, etc.). Made by Topps.
+- HOCKEY (NHL): Ice rink, skates, hockey stick and puck, NHL shield logo, team logos (Maple Leafs, Canadiens, Penguins, etc.), goalie mask art
+- GOLF: Golf course or driving range, golfer in swing pose, PGA Tour / LIV Golf branding, player name and world ranking
+- WRESTLING (WWE/AEW): Wrestling ring, championship belts, WWE logo or AEW "All Elite Wrestling" branding, wrestler in performance gear
+
+PREMIUM CARD TYPES (affect value — note in setName when visible):
+- Autograph / Auto: On-card or sticker signature
+- Relic / Patch / Jersey: Embedded fabric swatch, often labeled "Memorabilia" or "Relic"
+- Rookie Card (RC): First officially licensed card of a player, "RC" shield or "Rookie Card" text
+- Numbered parallels: "/10", "/25", "/50", "/99", "/149", "/199" printed on the card — always capture this in collectorNumber or setName
+- Refractor / Prizm / Chrome: Reflective holographic surface
 
 LANGUAGE DETECTION:
 - Japanese: katakana/hiragana/kanji characters. Still try to provide the English card name if you know it (e.g. set name = "Surging Sparks" even if the card is Japanese).
@@ -162,7 +184,7 @@ const GAME_RETRY_HINTS: Partial<Record<Game, string>> = {
   digimon: "Focus on the collector number at the bottom in BT#-### or EX#-### format (e.g. BT1-001). The play cost is top-left. Check for the Digimon level.",
   lorcana: "Focus on the bottom for the collector number. Check top-left for ink cost, and read the full card name which may include a subtitle after a dash.",
   riftbound: "Focus on the card number (format RB-### or similar). Read the champion/unit name at the top. Check for region indicators (Demacia, Noxus, Freljord, Piltover, Shadow Isles, etc.) and the Riot Games / Riftbound branding.",
-  sports: "Focus on the card number (usually bottom of front or anywhere on back). Read the year, manufacturer (Topps, Panini, Upper Deck, Prizm, etc.), team name, and player name carefully. Identify the sport from the action photo and team logos.",
+  sports: "Focus on: (1) the card number — usually bottom-right or bottom-left of the front, or anywhere on the back; (2) the manufacturer brand — Topps, Panini, Upper Deck, Bowman, Donruss, Fleer, etc. — read it exactly as printed; (3) the set name — e.g. 'Topps Chrome', 'Panini Prizm', 'Bowman Draft', 'Topps UFC'; (4) the player name — read exactly as printed; (5) the sport — identified from action photo, uniforms, team logos, and league branding; (6) any parallel/numbered designation — '/25', '/99', 'Prizm', 'Refractor', 'Gold', etc.",
 };
 
 function buildRetryPrompt(first: VisionGuess, hints?: ScanHints): string {
