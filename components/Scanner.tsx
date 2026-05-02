@@ -347,8 +347,46 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
   );
 
   // ── Setup phase: show config form ──
+  // Pre-seed BatchConfig from the active scan profile so the user doesn't
+  // have to re-enter game, language, condition, etc. on every new batch.
   if (phase === "setup") {
-    return <BatchSetup onStart={handleBatchStart} />;
+    const profileDefaults = activeProfile
+      ? {
+          game: activeProfile.game,
+          defaultCondition: activeProfile.defaultCondition,
+          language: activeProfile.language,
+          notes: activeProfile.notes,
+          platform: activeProfile.platform,
+          // Map foilType string → CardFinish enum
+          finish: (() => {
+            switch (activeProfile.foilType?.toLowerCase()) {
+              case "holofoil":
+              case "holo":
+                return "holo" as const;
+              case "reverse holo":
+              case "reverse-holo":
+                return "reverse-holo" as const;
+              case "full art":
+              case "full-art":
+                return "full-art" as const;
+              case "etched":
+                return "etched" as const;
+              case "none":
+              case "non-holo":
+                return "non-holo" as const;
+              default:
+                return undefined;
+            }
+          })(),
+        }
+      : {};
+
+    return (
+      <BatchSetup
+        onStart={handleBatchStart}
+        initialConfig={profileDefaults}
+      />
+    );
   }
 
   // ── Scanning phase ──

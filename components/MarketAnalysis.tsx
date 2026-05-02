@@ -87,7 +87,7 @@ export function MarketAnalysisPanel({
           <option value="mtg">Magic</option>
           <option value="yugioh">Yu-Gi-Oh!</option>
           <option value="lorcana">Lorcana</option>
-          <option value="one-piece">One Piece</option>
+          <option value="onepiece">One Piece</option>
         </select>
         <button
           className="btn-primary text-sm"
@@ -148,14 +148,14 @@ export function MarketAnalysisPanel({
             </div>
           )}
 
-          {/* MyCollectibles link */}
+          {/* External links */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-panel2 border border-border">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-accent" />
-              <span className="text-sm">View full price history on MyCollectibles.com</span>
+              <span className="text-sm">View recent sales on TCGPlayer</span>
             </div>
             <a
-              href={`https://www.mycollectibles.com/search?q=${encodeURIComponent(cardName)}`}
+              href={`https://www.tcgplayer.com/search/all/product?q=${encodeURIComponent(cardName)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn text-xs"
@@ -172,10 +172,10 @@ export function MarketAnalysisPanel({
         <div className="text-center py-8">
           <BarChart3 className="w-8 h-8 text-muted mx-auto mb-3" />
           <p className="text-sm text-muted">
-            Search for a card to see price trends and buy/hold/sell analysis
+            Search for a card to see its current market price and buy/hold/sell signal
           </p>
           <p className="text-xs text-muted mt-1">
-            Powered by market data from MyCollectibles.com
+            Powered by JustTCG &mdash; price history charts coming soon
           </p>
         </div>
       )}

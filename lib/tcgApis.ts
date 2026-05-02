@@ -121,14 +121,40 @@ async function lookupJustTcg(input: LookupInput): Promise<LookupHit | null> {
   if (input.setCode) params.set("set", input.setCode);
 
   const url = `https://api.justtcg.com/functions/v1/cards?${params.toString()}`;
-  const res = await fetch(url, {
-    headers: { "x-api-key": process.env.JUSTTCG_API_KEY! },
-  });
-  if (!res.ok) return null;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { "x-api-key": process.env.JUSTTCG_API_KEY! },
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch (err: any) {
+    console.warn("[justtcg] fetch error", err?.message);
+    return null;
+  }
+  if (!res.ok) {
+    console.warn("[justtcg] non-ok status", res.status, "for query:", params.get("q"));
+    return null;
+  }
 
-  const data = await res.json();
-  const cards = data?.data || data?.results || data;
-  if (!Array.isArray(cards) || cards.length === 0) {
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    console.warn("[justtcg] invalid JSON response");
+    return null;
+  }
+
+  // JustTCG wraps results under `data`, `results`, or returns a bare array.
+  // Log the shape on the first call to help catch API format changes.
+  const cards = Array.isArray(data)
+    ? data
+    : Array.isArray((data as any)?.data)
+      ? (data as any).data
+      : Array.isArray((data as any)?.results)
+        ? (data as any).results
+        : null;
+
+  if (!cards || cards.length === 0) {
     // Sports fallback: retry with name only if the enriched query returned nothing
     if (input.game === "sports" && input.setName) {
       const fallbackParams = new URLSearchParams();
@@ -136,12 +162,25 @@ async function lookupJustTcg(input: LookupInput): Promise<LookupHit | null> {
       fallbackParams.set("game", gameSlug);
       fallbackParams.set("limit", "5");
       const fallbackUrl = `https://api.justtcg.com/functions/v1/cards?${fallbackParams.toString()}`;
-      const res2 = await fetch(fallbackUrl, { headers: { "x-api-key": process.env.JUSTTCG_API_KEY! } });
-      if (!res2.ok) return null;
-      const data2 = await res2.json();
-      const cards2 = data2?.data || data2?.results || data2;
-      if (!Array.isArray(cards2) || cards2.length === 0) return null;
-      return justTcgToHit(cards2[0], input.game);
+      try {
+        const res2 = await fetch(fallbackUrl, {
+          headers: { "x-api-key": process.env.JUSTTCG_API_KEY! },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!res2.ok) return null;
+        const data2 = await res2.json();
+        const cards2 = Array.isArray(data2)
+          ? data2
+          : Array.isArray((data2 as any)?.data)
+            ? (data2 as any).data
+            : Array.isArray((data2 as any)?.results)
+              ? (data2 as any).results
+              : null;
+        if (!cards2 || cards2.length === 0) return null;
+        return justTcgToHit(cards2[0], input.game);
+      } catch {
+        return null;
+      }
     }
     return null;
   }

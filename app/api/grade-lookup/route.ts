@@ -22,69 +22,78 @@ interface GradeLookupResult {
   error?: string;
 }
 
-// PSA cert lookup via their public verification page
+// ── PSA ──────────────────────────────────────────────────────────────────────
+// Uses PSA's public certification API (no key required).
 async function lookupPSA(certNumber: string): Promise<GradeLookupResult> {
   try {
     const res = await fetch(
-      `https://www.psacard.com/cert/${encodeURIComponent(certNumber)}`,
+      `https://api.psacard.com/publicapi/cert/GetByCertNumber/${encodeURIComponent(certNumber)}`,
       {
         headers: {
-          "User-Agent": "TCGScanner/1.0",
-          "Accept": "text/html",
+          Accept: "application/json",
+          "User-Agent": "SnapList/1.0",
         },
+        // 8-second timeout via AbortController
+        signal: AbortSignal.timeout(8000),
       }
     );
-    if (!res.ok) return { verified: false, error: "PSA cert not found" };
 
-    const html = await res.text();
+    if (res.status === 404) return { verified: false, error: "PSA cert number not found." };
+    if (!res.ok) return { verified: false, error: `PSA returned status ${res.status}.` };
 
-    // Extract grade from PSA cert page
-    const gradeMatch = html.match(/class="card-grade[^"]*"[^>]*>([^<]+)/i)
-      || html.match(/Grade:\s*<[^>]+>([^<]+)/i)
-      || html.match(/"grade"\s*:\s*"([^"]+)"/i);
-    const grade = gradeMatch?.[1]?.trim();
+    const data = await res.json();
+    // PSA public API wraps results in a PSACert object
+    const cert = data?.PSACert ?? data;
 
-    // Extract card description
-    const descMatch = html.match(/class="card-desc[^"]*"[^>]*>([^<]+)/i)
-      || html.match(/"description"\s*:\s*"([^"]+)"/i);
-    const cardName = descMatch?.[1]?.trim();
+    if (!cert) return { verified: false, error: "Unexpected PSA response format." };
 
-    // Extract population
-    const popMatch = html.match(/Population:\s*(\d+)/i)
-      || html.match(/"population"\s*:\s*(\d+)/i);
-    const population = popMatch ? parseInt(popMatch[1], 10) : undefined;
+    const grade = cert.CardGrade ?? cert.grade ?? cert.Grade;
+    const cardName = [cert.Subject, cert.Spec, cert.CardNumber]
+      .filter(Boolean)
+      .join(" — ") || cert.cardName || cert.description;
+    const year = cert.Year ?? cert.year;
+    const population = cert.PopulationHigher != null
+      ? Number(cert.PopulationHigher) + 1   // PSA reports "pop higher" not total
+      : cert.population != null ? Number(cert.population) : undefined;
+    const label = cert.LabelType ?? cert.label;
 
     if (grade) {
-      return { verified: true, grade, cardName, population };
+      return { verified: true, grade: String(grade), cardName, year, population, label };
     }
-    return { verified: false, error: "Could not extract grade from PSA page" };
-  } catch {
-    return { verified: false, error: "Failed to reach PSA verification service" };
+    return { verified: false, error: "Could not extract grade from PSA response." };
+  } catch (err: any) {
+    if (err?.name === "TimeoutError") {
+      return { verified: false, error: "PSA verification timed out. Try again." };
+    }
+    return { verified: false, error: "Failed to reach PSA verification service." };
   }
 }
 
-// BGS (Beckett) cert lookup
+// ── BGS (Beckett) ─────────────────────────────────────────────────────────────
+// Beckett has no official public API — we use their cert page as a fallback.
 async function lookupBGS(certNumber: string): Promise<GradeLookupResult> {
   try {
     const res = await fetch(
       `https://www.beckett.com/grading/card-lookup?serial_number=${encodeURIComponent(certNumber)}`,
       {
-        headers: { "User-Agent": "TCGScanner/1.0", "Accept": "text/html" },
+        headers: { "User-Agent": "SnapList/1.0", Accept: "text/html" },
+        signal: AbortSignal.timeout(8000),
       }
     );
-    if (!res.ok) return { verified: false, error: "BGS cert not found" };
+    if (!res.ok) return { verified: false, error: "BGS cert not found." };
 
     const html = await res.text();
 
-    const gradeMatch = html.match(/Final\s*Grade[^<]*<[^>]+>([^<]+)/i)
-      || html.match(/"overall_grade"\s*:\s*"?([^",}]+)/i);
+    const gradeMatch =
+      html.match(/Final\s*Grade[^<]*<[^>]+>\s*([^<]+)/i) ||
+      html.match(/"overall_grade"\s*:\s*"?([^",}\s]+)/i);
     const grade = gradeMatch?.[1]?.trim();
 
-    // BGS sub-grades
     const subgrades: Record<string, string> = {};
-    const subMatches = html.matchAll(/(Centering|Corners|Edges|Surface)[^<]*<[^>]+>([^<]+)/gi);
+    const subMatches = html.matchAll(/(Centering|Corners|Edges|Surface)[^<]*<[^>]+>\s*([^<]+)/gi);
     for (const m of subMatches) {
-      subgrades[m[1].toLowerCase()] = m[2].trim();
+      const val = m[2].trim();
+      if (val && /[\d.]/.test(val)) subgrades[m[1].toLowerCase()] = val;
     }
 
     if (grade) {
@@ -94,79 +103,100 @@ async function lookupBGS(certNumber: string): Promise<GradeLookupResult> {
         subgrades: Object.keys(subgrades).length > 0 ? subgrades : undefined,
       };
     }
-    return { verified: false, error: "Could not extract grade from Beckett page" };
-  } catch {
-    return { verified: false, error: "Failed to reach BGS verification service" };
+    return {
+      verified: false,
+      error: "Could not extract grade from Beckett page. The page layout may have changed.",
+    };
+  } catch (err: any) {
+    if (err?.name === "TimeoutError") return { verified: false, error: "BGS verification timed out." };
+    return { verified: false, error: "Failed to reach BGS verification service." };
   }
 }
 
-// CGC cert lookup
+// ── CGC ───────────────────────────────────────────────────────────────────────
+// CGC has a public JSON cert lookup endpoint.
 async function lookupCGC(certNumber: string): Promise<GradeLookupResult> {
   try {
-    const res = await fetch(
+    // Try JSON API first
+    const jsonRes = await fetch(
       `https://www.cgccards.com/certlookup/${encodeURIComponent(certNumber)}/`,
       {
-        headers: { "User-Agent": "TCGScanner/1.0", "Accept": "text/html" },
+        headers: { "User-Agent": "SnapList/1.0", Accept: "application/json, text/html" },
+        signal: AbortSignal.timeout(8000),
       }
     );
-    if (!res.ok) return { verified: false, error: "CGC cert not found" };
 
-    const html = await res.text();
+    if (!jsonRes.ok) return { verified: false, error: "CGC cert not found." };
 
-    const gradeMatch = html.match(/Grade[^<]*<[^>]+>([^<]+)/i)
-      || html.match(/"grade"\s*:\s*"?([^",}]+)/i);
-    const grade = gradeMatch?.[1]?.trim();
+    const contentType = jsonRes.headers.get("content-type") ?? "";
 
-    if (grade) {
-      return { verified: true, grade };
+    if (contentType.includes("application/json")) {
+      const data = await jsonRes.json();
+      const grade =
+        data?.grade ?? data?.overallGrade ?? data?.certInfo?.grade ?? data?.certInfo?.overallGrade;
+      const cardName = data?.title ?? data?.certInfo?.title ?? data?.name;
+      if (grade) return { verified: true, grade: String(grade), cardName };
+      return { verified: false, error: "Unexpected CGC JSON format." };
     }
-    return { verified: false, error: "Could not extract grade from CGC page" };
-  } catch {
-    return { verified: false, error: "Failed to reach CGC verification service" };
+
+    // Fall back to HTML parsing
+    const html = await jsonRes.text();
+    const gradeMatch =
+      html.match(/class="[^"]*grade[^"]*"[^>]*>\s*([^<]+)/i) ||
+      html.match(/Grade[^<]*<[^>]+>\s*([^<]+)/i);
+    const grade = gradeMatch?.[1]?.trim();
+    if (grade && /[\d.]/.test(grade)) return { verified: true, grade };
+
+    return { verified: false, error: "Could not extract grade from CGC page." };
+  } catch (err: any) {
+    if (err?.name === "TimeoutError") return { verified: false, error: "CGC verification timed out." };
+    return { verified: false, error: "Failed to reach CGC verification service." };
   }
 }
 
-// SGC cert lookup
+// ── SGC ───────────────────────────────────────────────────────────────────────
 async function lookupSGC(certNumber: string): Promise<GradeLookupResult> {
   try {
     const res = await fetch(
       `https://www.gosgc.com/card-certification-verification?cert=${encodeURIComponent(certNumber)}`,
       {
-        headers: { "User-Agent": "TCGScanner/1.0", "Accept": "text/html" },
+        headers: { "User-Agent": "SnapList/1.0", Accept: "text/html" },
+        signal: AbortSignal.timeout(8000),
       }
     );
-    if (!res.ok) return { verified: false, error: "SGC cert not found" };
+    if (!res.ok) return { verified: false, error: "SGC cert not found." };
 
     const html = await res.text();
-
-    const gradeMatch = html.match(/Grade[^<]*<[^>]+>([^<]+)/i)
-      || html.match(/"grade"\s*:\s*"?([^",}]+)/i);
+    const gradeMatch =
+      html.match(/class="[^"]*grade[^"]*"[^>]*>\s*([^<]+)/i) ||
+      html.match(/Grade[^<]*<[^>]+>\s*([^<]+)/i) ||
+      html.match(/"grade"\s*:\s*"?([^",}\s]+)/i);
     const grade = gradeMatch?.[1]?.trim();
 
-    if (grade) {
-      return { verified: true, grade };
-    }
-    return { verified: false, error: "Could not extract grade from SGC page" };
-  } catch {
-    return { verified: false, error: "Failed to reach SGC verification service" };
+    if (grade && /[\d.]/.test(grade)) return { verified: true, grade };
+    return { verified: false, error: "Could not extract grade from SGC page." };
+  } catch (err: any) {
+    if (err?.name === "TimeoutError") return { verified: false, error: "SGC verification timed out." };
+    return { verified: false, error: "Failed to reach SGC verification service." };
   }
 }
 
-// TAG — falls back to manual entry (no public verification page)
+// ── TAG / ARS ─────────────────────────────────────────────────────────────────
 async function lookupTAG(_certNumber: string): Promise<GradeLookupResult> {
   return {
     verified: false,
-    error: "TAG does not offer public cert verification. Please enter grade manually.",
+    error: "TAG does not offer a public cert verification API. Please enter your grade manually.",
   };
 }
 
-// ARS (Japanese grading company) — limited public API
 async function lookupARS(_certNumber: string): Promise<GradeLookupResult> {
   return {
     verified: false,
-    error: "ARS does not currently offer public cert verification. Please enter grade manually.",
+    error: "ARS does not currently offer public cert verification. Please enter your grade manually.",
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const LOOKUP_FNS: Record<GradingCompany, (certNumber: string) => Promise<GradeLookupResult>> = {
   psa: lookupPSA,
@@ -190,17 +220,11 @@ export async function POST(req: NextRequest) {
     const certNumber = sanitizeString(body.certNumber, 50);
 
     if (!isValidGradingCompany(company)) {
-      return NextResponse.json(
-        { error: "Invalid grading company" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid grading company" }, { status: 400 });
     }
 
     if (!certNumber || certNumber.length < 3) {
-      return NextResponse.json(
-        { error: "Invalid cert number" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid cert number" }, { status: 400 });
     }
 
     const lookupFn = LOOKUP_FNS[company as GradingCompany];
@@ -208,9 +232,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch {
-    return NextResponse.json(
-      { error: "Grade lookup failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Grade lookup failed" }, { status: 500 });
   }
 }

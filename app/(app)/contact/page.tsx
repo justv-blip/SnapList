@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Mail, Send, MessageSquare, Bug, Lightbulb, Gift } from "lucide-react";
+import { Mail, Send, MessageSquare, Bug, Lightbulb, Gift, AlertCircle } from "lucide-react";
 
 const TOPICS = [
   { value: "general", label: "General Question", icon: MessageSquare },
@@ -15,6 +15,12 @@ function ContactForm() {
   const searchParams = useSearchParams();
   const [topic, setTopic] = useState("general");
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const emailRef = useRef<HTMLInputElement>(null);
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   // Pre-select topic from query param (e.g. /contact?topic=credits)
   useEffect(() => {
@@ -22,9 +28,34 @@ function ContactForm() {
     if (t && TOPICS.some((tp) => tp.value === t)) setTopic(t);
   }, [searchParams]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic,
+          email: emailRef.current?.value.trim(),
+          subject: subjectRef.current?.value.trim(),
+          message: messageRef.current?.value.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to send message");
+      }
+
+      setSent(true);
+    } catch (err: any) {
+      setError(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (sent) {
@@ -37,7 +68,7 @@ function ContactForm() {
         <p className="text-sm text-muted">
           Thanks for reaching out! We&apos;ll get back to you as soon as possible.
         </p>
-        <button className="btn mt-6" onClick={() => setSent(false)}>
+        <button className="btn mt-6" onClick={() => { setSent(false); setError(null); }}>
           Send another message
         </button>
       </div>
@@ -78,12 +109,19 @@ function ContactForm() {
 
       <div>
         <label className="label">Your email</label>
-        <input type="email" className="input mt-1" placeholder="you@example.com" required />
+        <input
+          ref={emailRef}
+          type="email"
+          className="input mt-1"
+          placeholder="you@example.com"
+          required
+        />
       </div>
 
       <div>
         <label className="label">Subject</label>
         <input
+          ref={subjectRef}
           className="input mt-1"
           placeholder={topic === "credits" ? "Credits submission — [Review / Video]" : "What's this about?"}
           required
@@ -93,6 +131,7 @@ function ContactForm() {
       <div>
         <label className="label">Message</label>
         <textarea
+          ref={messageRef}
           className="input mt-1 min-h-[140px]"
           placeholder={
             topic === "credits"
@@ -103,10 +142,17 @@ function ContactForm() {
         />
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 text-sm text-danger">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
       <div className="flex justify-end">
-        <button type="submit" className="btn-primary">
+        <button type="submit" className="btn-primary" disabled={submitting}>
           <Send className="w-4 h-4" />
-          Send Message
+          {submitting ? "Sending…" : "Send Message"}
         </button>
       </div>
     </form>

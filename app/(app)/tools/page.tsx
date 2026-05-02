@@ -40,11 +40,7 @@ function ToolCard({
 }) {
   const isComingSoon = status === "coming-soon";
   return (
-    <div
-      className={`card-panel flex flex-col gap-3 ${
-        isComingSoon ? "opacity-60" : ""
-      }`}
-    >
+    <div className="card-panel flex flex-col gap-3">
       <div className="flex items-start gap-3">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -59,7 +55,7 @@ function ToolCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm">{title}</h3>
+            <h3 className={`font-semibold text-sm ${isComingSoon ? "text-muted" : ""}`}>{title}</h3>
             {status === "connected" && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 border border-green-500/30 text-green-400">
                 <CheckCircle2 className="w-3 h-3" />
@@ -68,7 +64,7 @@ function ToolCard({
             )}
             {isComingSoon && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-panel2 border border-border text-muted">
-                Planned
+                On Roadmap
               </span>
             )}
           </div>
@@ -77,16 +73,15 @@ function ToolCard({
           </p>
         </div>
       </div>
-      <button
-        className={`btn self-start mt-auto ${
-          isComingSoon ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-        disabled={isComingSoon}
-        onClick={onAction}
-      >
-        {action}
-        <ArrowRight className="w-3.5 h-3.5" />
-      </button>
+      {!isComingSoon && (
+        <button
+          className="btn self-start mt-auto"
+          onClick={onAction}
+        >
+          {action}
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
