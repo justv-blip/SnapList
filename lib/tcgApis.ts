@@ -21,6 +21,7 @@ type LookupHit = Partial<ScannedCard> & { name: string; game: Game };
 interface LookupInput {
   game: Game;
   name: string;
+  setName?: string;
   setCode?: string;
   collectorNumber?: string;
 }
@@ -91,6 +92,7 @@ const JUSTTCG_GAME_MAP: Partial<Record<Game, string>> = {
   weissschwarz:   "weiss-schwarz",
   finalfantasy:   "final-fantasy",
   battlespirits:  "battle-spirits-saga",
+  riftbound:      "riftbound",
 };
 
 function isJustTcgEnabled(): boolean {
@@ -104,10 +106,19 @@ async function lookupJustTcg(input: LookupInput): Promise<LookupHit | null> {
   if (!gameSlug) return null;
 
   const params = new URLSearchParams();
-  params.set("q", input.name);
   params.set("game", gameSlug);
+  params.set("limit", "8");
+
+  // Sports cards: build a richer query using set name (brand + product line)
+  // e.g. "Patrick Mahomes Topps Chrome" is far more precise than just "Patrick Mahomes"
+  if (input.game === "sports" && input.setName) {
+    params.set("q", `${input.name} ${input.setName}`);
+  } else {
+    params.set("q", input.name);
+  }
+
   if (input.collectorNumber) params.set("number", input.collectorNumber);
-  params.set("limit", "5");
+  if (input.setCode) params.set("set", input.setCode);
 
   const url = `https://api.justtcg.com/functions/v1/cards?${params.toString()}`;
   const res = await fetch(url, {
@@ -117,13 +128,30 @@ async function lookupJustTcg(input: LookupInput): Promise<LookupHit | null> {
 
   const data = await res.json();
   const cards = data?.data || data?.results || data;
-  if (!Array.isArray(cards) || cards.length === 0) return null;
+  if (!Array.isArray(cards) || cards.length === 0) {
+    // Sports fallback: retry with name only if the enriched query returned nothing
+    if (input.game === "sports" && input.setName) {
+      const fallbackParams = new URLSearchParams();
+      fallbackParams.set("q", input.name);
+      fallbackParams.set("game", gameSlug);
+      fallbackParams.set("limit", "5");
+      const fallbackUrl = `https://api.justtcg.com/functions/v1/cards?${fallbackParams.toString()}`;
+      const res2 = await fetch(fallbackUrl, { headers: { "x-api-key": process.env.JUSTTCG_API_KEY! } });
+      if (!res2.ok) return null;
+      const data2 = await res2.json();
+      const cards2 = data2?.data || data2?.results || data2;
+      if (!Array.isArray(cards2) || cards2.length === 0) return null;
+      return justTcgToHit(cards2[0], input.game);
+    }
+    return null;
+  }
 
-  // Pick best match — prefer exact name match
+  // Pick best match — for sports prefer collector number match, then exact name match
   const needle = input.name.trim().toLowerCase();
-  const card = cards.find((c: any) =>
-    c.name?.toLowerCase() === needle
-  ) || cards[0];
+  const card =
+    (input.collectorNumber && cards.find((c: any) => c.number === input.collectorNumber)) ||
+    cards.find((c: any) => c.name?.toLowerCase() === needle) ||
+    cards[0];
 
   return justTcgToHit(card, input.game);
 }
@@ -160,6 +188,7 @@ async function enrichWithJustTcg(hit: LookupHit): Promise<LookupHit> {
     const pricingHit = await lookupJustTcg({
       game: hit.game,
       name: hit.name,
+      setName: hit.setName,
       setCode: hit.setCode,
       collectorNumber: hit.collectorNumber,
     });

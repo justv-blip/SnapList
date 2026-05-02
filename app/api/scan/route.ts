@@ -187,6 +187,7 @@ async function scanOne(file: File, hints?: ScanHints): Promise<ScanResult> {
   const hit = await lookupCard({
     game: guess.game,
     name: guess.name,
+    setName: guess.setName || undefined,
     setCode: guess.setCode || undefined,
     collectorNumber: guess.collectorNumber || undefined
   });
