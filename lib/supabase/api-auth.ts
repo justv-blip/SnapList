@@ -17,6 +17,7 @@ export interface AuthResult {
     trial_scans_used: number;
     trial_expires_at: string | null;
     stripe_customer_id: string | null;
+    credits: number;
   };
   supabase: ReturnType<typeof createServerClient>;
 }
@@ -49,7 +50,7 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
   // Fetch the user's profile (includes subscription tier)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, subscription_tier, trial_scans_used, trial_expires_at, stripe_customer_id")
+    .select("id, subscription_tier, trial_scans_used, trial_expires_at, stripe_customer_id, credits")
     .eq("id", user.id)
     .single();
 
@@ -61,19 +62,25 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
 }
 
 // Pre-flight check: verify the user has enough scans remaining.
+// Falls back to credits when the plan quota is exhausted.
 // Does NOT increment — call `commitScanUsage` after successful processing.
 export async function checkScanLimit(
   supabase: ReturnType<typeof createServerClient>,
   profile: AuthResult["profile"],
   imageCount: number
-): Promise<{ remaining: number }> {
+): Promise<{ remaining: number; creditsNeeded: number }> {
   const tier = profile.subscription_tier;
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
+  const userCredits = profile.credits ?? 0;
 
   if (tier === "free") {
     const used = profile.trial_scans_used || 0;
 
     if (profile.trial_expires_at && new Date(profile.trial_expires_at) < new Date()) {
+      // Expired trial: fall back to credits if available
+      if (userCredits >= imageCount) {
+        return { remaining: 0, creditsNeeded: imageCount };
+      }
       throw new AuthError(
         "Your free trial has expired. Upgrade to keep scanning.",
         403
@@ -81,14 +88,17 @@ export async function checkScanLimit(
     }
 
     if (used + imageCount > limit) {
+      // Over quota: fall back to credits if available
+      if (userCredits >= imageCount) {
+        return { remaining: 0, creditsNeeded: imageCount };
+      }
       throw new AuthError(
-        `Free trial limit reached (${used}/${limit} scans used). Upgrade to keep scanning.`,
+        `Free trial limit reached (${used}/${limit} scans used). Upgrade to keep scanning or earn credits.`,
         403
       );
     }
 
-    // Don't increment yet — wait for successful scan
-    return { remaining: limit - used - imageCount };
+    return { remaining: limit - used - imageCount, creditsNeeded: 0 };
   }
 
   // Paid tiers: check the current billing period (read-only)
@@ -105,24 +115,47 @@ export async function checkScanLimit(
   const currentCount = usage?.scan_count || 0;
 
   if (currentCount + imageCount > limit) {
+    // Over quota: fall back to credits if available
+    if (userCredits >= imageCount) {
+      return { remaining: 0, creditsNeeded: imageCount };
+    }
     throw new AuthError(
-      `Monthly scan limit reached (${currentCount}/${limit}). Upgrade for more scans.`,
+      `Monthly scan limit reached (${currentCount}/${limit}). Upgrade for more scans or earn credits.`,
       403
     );
   }
 
-  return { remaining: limit - currentCount - imageCount };
+  return { remaining: limit - currentCount - imageCount, creditsNeeded: 0 };
 }
 
 // Atomically increment scan usage AFTER successful processing.
 // Uses Postgres RPCs to avoid race conditions from concurrent requests.
 // `successCount` should be the number of scans that actually succeeded.
+// `creditsNeeded` should match what checkScanLimit returned — deducted atomically.
 export async function commitScanUsage(
   supabase: ReturnType<typeof createServerClient>,
   profile: AuthResult["profile"],
-  successCount: number
+  successCount: number,
+  creditsNeeded = 0
 ): Promise<void> {
   if (successCount <= 0) return;
+
+  // Deduct credits if this scan consumed them instead of plan quota
+  if (creditsNeeded > 0) {
+    for (let i = 0; i < creditsNeeded; i++) {
+      const { data: ok, error } = await supabase.rpc("use_credit");
+      if (error) {
+        logger.error("use_credit RPC error", { userId: profile.id, error: error.message });
+        break; // stop if RPC fails — don't over-deduct
+      }
+      if (ok === false) {
+        logger.warn("use_credit returned false (insufficient balance)", { userId: profile.id });
+        break;
+      }
+    }
+    // Credits consumed — don't also charge the plan quota
+    return;
+  }
 
   const tier = profile.subscription_tier;
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;

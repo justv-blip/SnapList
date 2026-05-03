@@ -8,6 +8,33 @@ import { lookupCard } from "@/lib/tcgApis";
 import { sanitizeString } from "@/lib/validation";
 import type { Game } from "@/lib/types";
 
+// Infer game from listing title via keyword matching
+function inferGameFromTitle(title: string): Game {
+  const t = title.toLowerCase();
+  if (t.includes("magic") || t.includes(" mtg ") || t.includes("the gathering")) return "mtg";
+  if (t.includes("yu-gi-oh") || t.includes("yugioh") || t.includes("ygo")) return "yugioh";
+  if (t.includes("one piece")) return "onepiece";
+  if (t.includes("digimon")) return "digimon";
+  if (t.includes("lorcana")) return "lorcana";
+  if (t.includes("flesh and blood") || t.includes("flesh & blood")) return "fleshandblood";
+  if (t.includes("dragon ball")) return "dragonball";
+  if (t.includes("weiss schwarz") || t.includes("weiß schwarz")) return "weissschwarz";
+  if (t.includes("final fantasy")) return "finalfantasy";
+  if (t.includes("union arena")) return "unionarena";
+  if (t.includes("battle spirits")) return "battlespirits";
+  if (t.includes("gundam")) return "gundam";
+  if (t.includes("vanguard")) return "vanguard";
+  if (t.includes("riftbound") || t.includes("runeterra")) return "riftbound";
+  // Sports: detect common brands/leagues before defaulting to Pokémon
+  if (
+    t.includes("topps") || t.includes("panini") || t.includes("upper deck") ||
+    t.includes("bowman") || t.includes("prizm") || t.includes("donruss") ||
+    t.includes("nfl") || t.includes("nba") || t.includes("mlb") || t.includes("nhl") ||
+    t.includes("ufc") || t.includes("rookie card") || t.includes(" rc ")
+  ) return "sports";
+  return "pokemon"; // default
+}
+
 export const runtime = "nodejs";
 
 export interface EnrichedListing extends ActiveListing {
@@ -37,7 +64,7 @@ export async function GET(req: NextRequest) {
       if (!listing.cardName) return listing;
       try {
         const hit = await lookupCard({
-          game: "pokemon" as Game, // default; improve with game detection from SKU/title
+          game: inferGameFromTitle(listing.title),
           name: listing.cardName,
         });
         if (!hit?.marketPriceUsd) return listing;

@@ -29,7 +29,7 @@ export interface MarketAnalysis {
   signalConfidence: number;   // 0-1
   signalReasoning: string;
   priceHistory: MarketDataPoint[];
-  source: "mycollectibles" | "internal";
+  source: "justtcg" | "internal";
   lastUpdated: string;
 }
 

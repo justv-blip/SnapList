@@ -60,7 +60,12 @@ const nextConfig = {
       { protocol: "https", hostname: "images.pokemontcg.io" },
       { protocol: "https", hostname: "cards.scryfall.io" },
       { protocol: "https", hostname: "images.ygoprodeck.com" },
-      { protocol: "https", hostname: "*.cloudfront.net" }
+      { protocol: "https", hostname: "*.cloudfront.net" },
+      { protocol: "https", hostname: "images.digimoncard.io" },
+      { protocol: "https", hostname: "lorcast.com" },
+      { protocol: "https", hostname: "api.lorcast.com" },
+      { protocol: "https", hostname: "optcgapi.com" },
+      { protocol: "https", hostname: "*.supabase.co" },
     ]
   },
   serverExternalPackages: ["@anthropic-ai/sdk"]

@@ -4,6 +4,7 @@ import { lookupCard } from "@/lib/tcgApis";
 import { requireAuth, authErrorResponse } from "@/lib/supabase/api-auth";
 import { sanitizeString, isValidGame } from "@/lib/validation";
 import { recordPrice, getPriceTrend } from "@/lib/priceHistory";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { Game } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -14,6 +15,15 @@ export async function POST(req: NextRequest) {
     auth = await requireAuth(req);
   } catch (err) {
     return authErrorResponse(err);
+  }
+
+  // Per-user rate limit: 30 market-analysis calls per minute
+  const rl = checkRateLimit({ id: "market-analysis", limit: 30, windowSec: 60 }, auth.user.id);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Rate limit exceeded. Try again in ${rl.retryAfterSec}s.` },
+      { status: 429 }
+    );
   }
 
   try {

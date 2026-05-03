@@ -7,6 +7,7 @@ import { lookupCard } from "@/lib/tcgApis";
 import { requireAuth, authErrorResponse } from "@/lib/supabase/api-auth";
 import { recordPrice } from "@/lib/priceHistory";
 import { sanitizeString, isValidGame, MAX_PAYLOAD } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,15 @@ export async function POST(req: NextRequest) {
     auth = await requireAuth(req);
   } catch (err) {
     return authErrorResponse(err);
+  }
+
+  // Per-user rate limit: 60 lookups per minute
+  const rl = checkRateLimit({ id: "lookup", limit: 60, windowSec: 60 }, auth.user.id);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Rate limit exceeded. Try again in ${rl.retryAfterSec}s.` },
+      { status: 429 }
+    );
   }
 
   // Enforce payload size limit

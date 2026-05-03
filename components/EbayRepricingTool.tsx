@@ -183,6 +183,14 @@ export function EbayRepricingTool() {
       {/* Listings table */}
       {listings.length > 0 && (
         <>
+          {/* Pagination notice — eBay fetch is capped at 200 */}
+          {listings.length === 200 && (
+            <div className="flex items-center gap-2 text-xs text-muted bg-panel2 border border-border rounded-lg px-3 py-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              Showing the first 200 listings. If you have more, reprice in batches by refreshing after each run.
+            </div>
+          )}
+
           {/* Done banner */}
           {done && (
             <div className="flex items-center gap-2 text-sm text-accent2 bg-accent2/10 border border-accent2/20 rounded-lg px-3 py-2">

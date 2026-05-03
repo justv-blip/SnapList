@@ -81,9 +81,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Check scan limits before processing
+  let creditsNeeded = 0;
   try {
-    const { remaining } = await checkScanLimit(auth.supabase, auth.profile, files.length);
-    log.info("scan request", { userId: auth.user.id, images: files.length, remaining });
+    const limitCheck = await checkScanLimit(auth.supabase, auth.profile, files.length);
+    creditsNeeded = limitCheck.creditsNeeded;
+    log.info("scan request", { userId: auth.user.id, images: files.length, remaining: limitCheck.remaining, creditsNeeded });
   } catch (err) {
     return authErrorResponse(err);
   }
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest) {
   const successCount = results.filter((r) => !(r as any)._failed).length;
   if (successCount > 0) {
     try {
-      await commitScanUsage(auth.supabase, auth.profile, successCount);
+      await commitScanUsage(auth.supabase, auth.profile, successCount, creditsNeeded);
     } catch (err: any) {
       log.error("failed to commit scan usage", { userId: auth.user.id, message: err?.message });
       // Don't fail the request — scans already completed

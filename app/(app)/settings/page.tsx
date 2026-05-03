@@ -62,6 +62,11 @@ export default function SettingsPage() {
   const [ebayLoading, setEbayLoading] = useState(true);
   const [ebayDisconnecting, setEbayDisconnecting] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
+  // Scanning / listing preference state (persisted in localStorage)
+  const [defaultGame, setDefaultGamePref] = useState("pokemon");
+  const [defaultCamera, setDefaultCamera] = useState("environment");
+  const [defaultCondition, setDefaultCondition] = useState("Near Mint");
+  const [currency, setCurrency] = useState("USD");
   const { toast } = useToast();
 
   const patchRules = (updates: Partial<DecisionRules>) => {
@@ -150,6 +155,11 @@ export default function SettingsPage() {
       if (savedRules) setDecisionRules(JSON.parse(savedRules));
       const savedPricing = localStorage.getItem("pricing_config");
       if (savedPricing) setPricingConfig(JSON.parse(savedPricing));
+      // Load scanning / listing preferences
+      setDefaultGamePref(localStorage.getItem("settings_default_game") || "pokemon");
+      setDefaultCamera(localStorage.getItem("settings_default_camera") || "environment");
+      setDefaultCondition(localStorage.getItem("settings_default_condition") || "Near Mint");
+      setCurrency(localStorage.getItem("settings_currency") || "USD");
     } catch { /* ignore */ }
   }, []);
 
@@ -361,18 +371,38 @@ export default function SettingsPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="label">Default Game</label>
-            <select className="input mt-1" defaultValue="pokemon">
+            <select
+              className="input mt-1"
+              value={defaultGame}
+              onChange={(e) => {
+                setDefaultGamePref(e.target.value);
+                localStorage.setItem("settings_default_game", e.target.value);
+                toast("success", "Default game saved");
+              }}
+            >
               <option value="pokemon">Pokémon</option>
               <option value="mtg">Magic: The Gathering</option>
               <option value="yugioh">Yu-Gi-Oh!</option>
               <option value="onepiece">One Piece</option>
               <option value="digimon">Digimon</option>
               <option value="lorcana">Disney Lorcana</option>
+              <option value="fleshandblood">Flesh and Blood</option>
+              <option value="dragonball">Dragon Ball Super</option>
+              <option value="weissschwarz">Weiss Schwarz</option>
+              <option value="sports">Sports</option>
             </select>
           </div>
           <div>
             <label className="label">Default Camera</label>
-            <select className="input mt-1" defaultValue="environment">
+            <select
+              className="input mt-1"
+              value={defaultCamera}
+              onChange={(e) => {
+                setDefaultCamera(e.target.value);
+                localStorage.setItem("settings_default_camera", e.target.value);
+                toast("success", "Default camera saved");
+              }}
+            >
               <option value="environment">Rear Camera</option>
               <option value="user">Front Camera</option>
             </select>
@@ -389,7 +419,15 @@ export default function SettingsPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="label">Default Condition</label>
-            <select className="input mt-1" defaultValue="Near Mint">
+            <select
+              className="input mt-1"
+              value={defaultCondition}
+              onChange={(e) => {
+                setDefaultCondition(e.target.value);
+                localStorage.setItem("settings_default_condition", e.target.value);
+                toast("success", "Default condition saved");
+              }}
+            >
               <option>Near Mint</option>
               <option>Lightly Played</option>
               <option>Moderately Played</option>
@@ -399,7 +437,15 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="label">Currency</label>
-            <select className="input mt-1" defaultValue="USD">
+            <select
+              className="input mt-1"
+              value={currency}
+              onChange={(e) => {
+                setCurrency(e.target.value);
+                localStorage.setItem("settings_currency", e.target.value);
+                toast("success", "Currency saved");
+              }}
+            >
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
               <option value="GBP">GBP (£)</option>
@@ -465,35 +511,6 @@ export default function SettingsPage() {
             Connect eBay Account
           </a>
         )}
-      </div>
-
-      {/* ── Pricing ── */}
-      <div className="card-panel">
-        <div className="flex items-center gap-2 mb-5">
-          <DollarSign className="w-5 h-5 text-accent" />
-          <h2 className="font-semibold">Pricing</h2>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="label">Price Source</label>
-            <select className="input mt-1">
-              <option>TCGPlayer Market</option>
-              <option>TCGPlayer Low</option>
-              <option>eBay Sold Average</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">Price Markup (%)</label>
-            <input
-              type="number"
-              className="input mt-1"
-              defaultValue={0}
-              min={-50}
-              max={200}
-              step={5}
-            />
-          </div>
-        </div>
       </div>
 
       {/* ── Decision Rules ── */}

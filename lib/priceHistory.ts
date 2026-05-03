@@ -33,8 +33,15 @@ interface RecordPriceInput {
   source: "scan" | "lookup" | "market-analysis";
 }
 
+// Minimum interval between price recordings for the same card (4 hours)
+const DEDUP_WINDOW_MS = 4 * 60 * 60 * 1000;
+// Skip insert if new price is within 5% of the last recorded price
+const DEDUP_PRICE_TOLERANCE = 0.05;
+
 /**
  * Insert a single price observation. Never throws — errors are logged only.
+ * Deduplicates: skips if the same fingerprint was recorded within 4 hours
+ * at a price within 5% of the current price.
  */
 export async function recordPrice(
   supabase: SupabaseClient,
@@ -44,9 +51,32 @@ export async function recordPrice(
   if (!input.priceUsd || input.priceUsd <= 0) return;
 
   try {
+    const fingerprint = makeFingerprint(input.game, input.name, input.setName);
+    const dedupCutoff = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString();
+
+    // Check for a recent recording within the dedup window
+    const { data: recent } = await supabase
+      .from("price_history")
+      .select("price_usd, recorded_at")
+      .eq("user_id", userId)
+      .eq("card_fingerprint", fingerprint)
+      .gte("recorded_at", dedupCutoff)
+      .order("recorded_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (recent) {
+      const lastPrice = Number(recent.price_usd);
+      const priceDiff = Math.abs(input.priceUsd - lastPrice) / lastPrice;
+      if (priceDiff <= DEDUP_PRICE_TOLERANCE) {
+        // Same card, recent recording, price barely changed — skip
+        return;
+      }
+    }
+
     const { error } = await supabase.from("price_history").insert({
       user_id: userId,
-      card_fingerprint: makeFingerprint(input.game, input.name, input.setName),
+      card_fingerprint: fingerprint,
       game: input.game,
       card_name: input.name,
       set_name: input.setName || null,

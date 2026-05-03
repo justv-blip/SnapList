@@ -11,6 +11,8 @@ export interface ScanUsageProps {
   onUpgrade?: () => void;
   /** If true, renders a compact single-row variant */
   compact?: boolean;
+  /** Bonus credits earned (shown as "+ X bonus scans") */
+  credits?: number;
 }
 
 const TIER_BADGE: Record<string, string> = {
@@ -79,6 +81,7 @@ export function ScanUsageCard({
   trialExpiresAt,
   onUpgrade,
   compact = false,
+  credits = 0,
 }: ScanUsageProps) {
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
   const pct = Math.min(100, Math.round((scansUsed / limit) * 100));
@@ -191,6 +194,11 @@ export function ScanUsageCard({
                   <> &middot; <span className="text-foreground font-medium">{remaining.toLocaleString()} remaining</span></>
                 )}
               </p>
+              {credits > 0 && (
+                <p className="text-xs text-accent2 mt-1">
+                  + <span className="font-semibold">{credits.toLocaleString()}</span> bonus scan{credits !== 1 ? "s" : ""} from credits
+                </p>
+              )}
             </>
           )}
 
