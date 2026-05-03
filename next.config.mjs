@@ -7,6 +7,21 @@ const nextConfig = {
   // ── Security headers ──────────────────────────────────────────
   async headers() {
     return [
+      // Service worker must never be cached — stale SWs prevent app updates
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      // Manifest can be cached briefly
+      {
+        source: "/manifest.json",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
       {
         source: "/(.*)",
         headers: [

@@ -1,10 +1,17 @@
 // Service worker for TCG Scanner PWA.
 // Provides offline shell caching, offline fallback page, and install capability.
 
-const CACHE_NAME = "tcg-scanner-v3";
+const CACHE_NAME = "tcg-scanner-v4";
 
 // Pre-cached at install time — must include the offline fallback page.
-const SHELL_URLS = ["/", "/offline"];
+const SHELL_URLS = [
+  "/",
+  "/offline",
+  "/dashboard",
+  "/collection",
+  "/scan",
+  "/manifest.json",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
