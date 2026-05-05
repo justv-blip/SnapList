@@ -268,14 +268,14 @@ export default function Home() {
 
                 {/* Card details row */}
                 <div className="flex gap-4 items-start">
-                  {/* Card image placeholder */}
-                  <div className="w-16 h-22 rounded-lg shrink-0 overflow-hidden border border-border/60"
-                       style={{ aspectRatio: "2.5/3.5", height: "88px", minWidth: "63px" }}>
-                    <div className="w-full h-full bg-gradient-to-br from-accent/20 via-panel2 to-accent2/20 flex flex-col items-center justify-center gap-1">
-                      <ScanLine className="w-5 h-5 text-accent/60" />
-                      <span className="text-[8px] text-muted">FRONT</span>
-                    </div>
-                  </div>
+                  {/* Card image */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://images.pokemontcg.io/swsh12pt5/159_hires.png"
+                    alt="Charizard VMAX - Crown Zenith #159/159"
+                    className="rounded-lg shrink-0 border border-border/60 object-cover"
+                    style={{ height: "88px", width: "63px" }}
+                  />
 
                   {/* Card info */}
                   <div className="flex-1 min-w-0 space-y-2">
