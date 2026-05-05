@@ -63,6 +63,7 @@ export default function SettingsPage() {
   const [ebayDisconnecting, setEbayDisconnecting] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
   const [upgradeTier, setUpgradeTier] = useState<string>("starter");
+  const [rolloverScans, setRolloverScans] = useState(0);
   // Scanning / listing preference state (persisted in localStorage)
   const [defaultGame, setDefaultGamePref] = useState("pokemon");
   const [defaultCamera, setDefaultCamera] = useState("environment");
@@ -221,7 +222,7 @@ export default function SettingsPage() {
       const { data: p } = await supabase
         .from("profiles")
         .select(
-          "id, display_name, subscription_tier, trial_scans_used, trial_expires_at, stripe_customer_id, created_at"
+          "id, display_name, subscription_tier, trial_scans_used, trial_expires_at, stripe_customer_id, created_at, rollover_scans"
         )
         .eq("id", user.id)
         .single();
@@ -237,6 +238,7 @@ export default function SettingsPage() {
           stripeCustomerId: p.stripe_customer_id,
           createdAt: p.created_at,
         });
+        setRolloverScans(p.rollover_scans ?? 0);
       }
 
       // Get current period scan count for paid tiers
@@ -332,6 +334,7 @@ export default function SettingsPage() {
           scansUsed={used}
           trialExpiresAt={profile?.trialExpiresAt}
           onUpgrade={handleUpgrade}
+          rolloverScans={rolloverScans}
         />
 
         {/* Manage subscription (paid tiers) */}

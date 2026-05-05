@@ -13,6 +13,8 @@ export interface ScanUsageProps {
   compact?: boolean;
   /** Bonus credits earned (shown as "+ X bonus scans") */
   credits?: number;
+  /** Unused scans rolled over from the previous billing month */
+  rolloverScans?: number;
 }
 
 const TIER_BADGE: Record<string, string> = {
@@ -82,10 +84,13 @@ export function ScanUsageCard({
   onUpgrade,
   compact = false,
   credits = 0,
+  rolloverScans = 0,
 }: ScanUsageProps) {
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
-  const pct = Math.min(100, Math.round((scansUsed / limit) * 100));
-  const remaining = Math.max(0, limit - scansUsed);
+  // Effective capacity includes rollover from last month
+  const effectiveLimit = limit + rolloverScans;
+  const pct = Math.min(100, Math.round((scansUsed / effectiveLimit) * 100));
+  const remaining = Math.max(0, effectiveLimit - scansUsed);
   const tierLabel = TIER_LABELS[tier] || tier;
   const isFree = tier === "free";
   const isEnterprise = tier === "enterprise";
@@ -188,12 +193,17 @@ export function ScanUsageCard({
               <p className="text-xs text-muted">
                 <span className="font-semibold text-foreground">{scansUsed.toLocaleString()}</span>
                 {" "}of{" "}
-                <span className="font-semibold text-foreground">{limit.toLocaleString()}</span>
+                <span className="font-semibold text-foreground">{effectiveLimit.toLocaleString()}</span>
                 {" "}scans used this month
                 {remaining > 0 && (
                   <> &middot; <span className="text-foreground font-medium">{remaining.toLocaleString()} remaining</span></>
                 )}
               </p>
+              {rolloverScans > 0 && (
+                <p className="text-xs text-accent mt-1">
+                  ↩ <span className="font-semibold">{rolloverScans.toLocaleString()}</span> rollover scan{rolloverScans !== 1 ? "s" : ""} included from last month
+                </p>
+              )}
               {credits > 0 && (
                 <p className="text-xs text-accent2 mt-1">
                   + <span className="font-semibold">{credits.toLocaleString()}</span> bonus scan{credits !== 1 ? "s" : ""} from credits

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { TIER_LIMITS } from "@/lib/tierLimits";
 import { logger } from "@/lib/logger";
+// No import needed for ROLLOVER_CAPS here — rollover balance is read from the DB column.
 
 export { TIER_LIMITS };
 
@@ -18,6 +19,8 @@ export interface AuthResult {
     trial_expires_at: string | null;
     stripe_customer_id: string | null;
     credits: number;
+    /** Unused scans carried forward from the previous billing month. */
+    rollover_scans: number;
   };
   supabase: ReturnType<typeof createServerClient>;
 }
@@ -50,7 +53,7 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
   // Fetch the user's profile (includes subscription tier)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, subscription_tier, trial_scans_used, trial_expires_at, stripe_customer_id, credits")
+    .select("id, subscription_tier, trial_scans_used, trial_expires_at, stripe_customer_id, credits, rollover_scans")
     .eq("id", user.id)
     .single();
 
@@ -62,13 +65,14 @@ export async function requireAuth(req: NextRequest): Promise<AuthResult> {
 }
 
 // Pre-flight check: verify the user has enough scans remaining.
-// Falls back to credits when the plan quota is exhausted.
+// Rollover scans are consumed after the base plan quota is exhausted.
+// Credits are the last resort when both quota and rollover are gone.
 // Does NOT increment — call `commitScanUsage` after successful processing.
 export async function checkScanLimit(
   supabase: ReturnType<typeof createServerClient>,
   profile: AuthResult["profile"],
   imageCount: number
-): Promise<{ remaining: number; creditsNeeded: number }> {
+): Promise<{ remaining: number; creditsNeeded: number; rolloverUsed: number }> {
   const tier = profile.subscription_tier;
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
   const userCredits = profile.credits ?? 0;
@@ -79,7 +83,7 @@ export async function checkScanLimit(
     if (profile.trial_expires_at && new Date(profile.trial_expires_at) < new Date()) {
       // Expired trial: fall back to credits if available
       if (userCredits >= imageCount) {
-        return { remaining: 0, creditsNeeded: imageCount };
+        return { remaining: 0, creditsNeeded: imageCount, rolloverUsed: 0 };
       }
       throw new AuthError(
         "Your free trial has expired. Upgrade to keep scanning.",
@@ -90,15 +94,15 @@ export async function checkScanLimit(
     if (used + imageCount > limit) {
       // Over quota: fall back to credits if available
       if (userCredits >= imageCount) {
-        return { remaining: 0, creditsNeeded: imageCount };
+        return { remaining: 0, creditsNeeded: imageCount, rolloverUsed: 0 };
       }
       throw new AuthError(
-        `Free trial limit reached (${used}/${limit} scans used). Upgrade to keep scanning or earn credits.`,
+        `Free plan limit reached (${used}/${limit} scans used). Upgrade to keep scanning or earn credits.`,
         403
       );
     }
 
-    return { remaining: limit - used - imageCount, creditsNeeded: 0 };
+    return { remaining: limit - used - imageCount, creditsNeeded: 0, rolloverUsed: 0 };
   }
 
   // Paid tiers: check the current billing period (read-only)
@@ -113,30 +117,43 @@ export async function checkScanLimit(
     .single();
 
   const currentCount = usage?.scan_count || 0;
+  const rollover = profile.rollover_scans ?? 0;
+  // Total capacity = base limit + any rollover from previous month
+  const totalCapacity = limit + rollover;
 
-  if (currentCount + imageCount > limit) {
-    // Over quota: fall back to credits if available
+  if (currentCount + imageCount > totalCapacity) {
+    // Over total capacity (base + rollover): fall back to credits if available
     if (userCredits >= imageCount) {
-      return { remaining: 0, creditsNeeded: imageCount };
+      return { remaining: 0, creditsNeeded: imageCount, rolloverUsed: 0 };
     }
     throw new AuthError(
-      `Monthly scan limit reached (${currentCount}/${limit}). Upgrade for more scans or earn credits.`,
+      `Monthly scan limit reached (${currentCount}/${totalCapacity}${rollover > 0 ? ` incl. ${rollover} rollover` : ""}). Upgrade for more scans or earn credits.`,
       403
     );
   }
 
-  return { remaining: limit - currentCount - imageCount, creditsNeeded: 0 };
+  // How many of this batch draw from rollover rather than the base quota?
+  const normalRemaining = Math.max(0, limit - currentCount);
+  const rolloverUsed = Math.max(0, imageCount - normalRemaining);
+
+  return {
+    remaining: totalCapacity - currentCount - imageCount,
+    creditsNeeded: 0,
+    rolloverUsed,
+  };
 }
 
 // Atomically increment scan usage AFTER successful processing.
 // Uses Postgres RPCs to avoid race conditions from concurrent requests.
-// `successCount` should be the number of scans that actually succeeded.
-// `creditsNeeded` should match what checkScanLimit returned — deducted atomically.
+// `successCount`  — number of scans that actually succeeded.
+// `creditsNeeded` — match what checkScanLimit returned; deducted via use_credit RPC.
+// `rolloverUsed`  — scans drawn from rollover balance; decrements profiles.rollover_scans.
 export async function commitScanUsage(
   supabase: ReturnType<typeof createServerClient>,
   profile: AuthResult["profile"],
   successCount: number,
-  creditsNeeded = 0
+  creditsNeeded = 0,
+  rolloverUsed = 0
 ): Promise<void> {
   if (successCount <= 0) return;
 
@@ -224,6 +241,17 @@ export async function commitScanUsage(
 
   if (data < 0) {
     logger.warn("commitScanUsage atomic check failed (paid)", { userId: profile.id, code: data });
+  }
+
+  // Decrement rollover balance if this batch drew from it.
+  // Non-atomic (separate update) is acceptable — rollover is bonus capacity,
+  // and the monthly cron will recalculate it correctly regardless.
+  if (rolloverUsed > 0) {
+    const newRollover = Math.max(0, (profile.rollover_scans ?? 0) - rolloverUsed);
+    await supabase
+      .from("profiles")
+      .update({ rollover_scans: newRollover })
+      .eq("id", profile.id);
   }
 }
 

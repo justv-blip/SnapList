@@ -223,7 +223,7 @@ export default function DashboardPage() {
 
       const { data: p } = await supabase
         .from("profiles")
-        .select("subscription_tier, trial_scans_used, trial_expires_at, credits")
+        .select("subscription_tier, trial_scans_used, trial_expires_at, credits, rollover_scans")
         .eq("id", user.id)
         .single();
 
@@ -249,6 +249,7 @@ export default function DashboardPage() {
         scansUsed,
         trialExpiresAt: p.trial_expires_at,
         credits: p.credits ?? 0,
+        rolloverScans: p.rollover_scans ?? 0,
       });
     } catch { /* non-critical */ }
   };
