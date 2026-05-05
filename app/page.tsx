@@ -147,7 +147,7 @@ const FAQ = [
   },
   {
     q: "Do I need to pay to try it?",
-    a: "No. The free trial gives you 50 scans and listings or 5 days of full access — no credit card required. Paid plans start at $4.95/month with both monthly and yearly billing available.",
+    a: "No. The free plan gives you 25 scans per month forever — no credit card required, no expiry. Paid plans start at $12/month.",
   },
   {
     q: "How is this different from other listing tools?",
@@ -228,7 +228,7 @@ export default function Home() {
             </span>
             <span className="flex items-center gap-1.5">
               <Check className="w-4 h-4 text-accent2" />
-              50 free scans
+              25 free scans
             </span>
             <span className="flex items-center gap-1.5">
               <Check className="w-4 h-4 text-accent2" />
@@ -268,11 +268,11 @@ export default function Home() {
 
                 {/* Card details row */}
                 <div className="flex gap-4 items-start">
-                  {/* Card image */}
+                  {/* Card image — Charizard VMAX (Shining Fates Shiny Vault SV107) */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://images.pokemontcg.io/swsh12pt5/159_hires.png"
-                    alt="Charizard VMAX - Crown Zenith #159/159"
+                    src="https://images.pokemontcg.io/swsh45sv/SV107_hires.png"
+                    alt="Charizard VMAX - Shining Fates SV107"
                     className="rounded-lg shrink-0 border border-border/60 object-cover"
                     style={{ height: "88px", width: "63px" }}
                   />
@@ -281,7 +281,7 @@ export default function Home() {
                   <div className="flex-1 min-w-0 space-y-2">
                     <div>
                       <div className="text-sm font-bold truncate">Charizard VMAX</div>
-                      <div className="text-xs text-muted mt-0.5">Crown Zenith &middot; #159/159 &middot; Secret Rare</div>
+                      <div className="text-xs text-muted mt-0.5">Shining Fates &middot; SV107/SV122 &middot; Secret Rare</div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       <span className="chip text-[10px]">Pokémon</span>
@@ -486,7 +486,7 @@ export default function Home() {
           </div>
           <h3 className="text-xl sm:text-2xl font-bold">Try SnapList free</h3>
           <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
-            Get 50 free scans and listings or 5 days of full access.
+            25 free scans every month, forever. No credit card, no expiry.
             Explore every feature before you commit.
           </p>
           <Link href="/login" className="btn-primary mt-6 text-sm shadow-lg shadow-accent/20">
@@ -586,7 +586,7 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Ready to list faster?</h2>
           <p className="text-muted mb-8 max-w-md mx-auto leading-relaxed">
             Stop typing card names one by one. Scan your stack, review, and
-            export — all in one place. Start with 50 free scans.
+            export — all in one place. Start with 25 free scans.
           </p>
           <Link href="/login" className="btn-primary text-base px-8 py-3.5 shadow-lg shadow-accent/20">
             Start Scanning Free
