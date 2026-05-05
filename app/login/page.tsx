@@ -66,6 +66,10 @@ function LoginContent() {
 
   const handleEmailPassword = async () => {
     if (!email || !password) { setError("Enter email and password"); return; }
+    if (mode === "signup" && !agreedToTerms) {
+      setError("You must agree to the Terms of Service and Privacy Policy to create an account.");
+      return;
+    }
     setLoading(true);
     setError(null);
 

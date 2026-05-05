@@ -12,7 +12,9 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 // Environment config
 // ---------------------------------------------------------------------------
 
-const SANDBOX = process.env.NEXT_PUBLIC_EBAY_SANDBOX === "true";
+// Use EBAY_ENVIRONMENT (server-only) as the single source of truth for sandbox vs production.
+// Do NOT use NEXT_PUBLIC_EBAY_SANDBOX — it's a server-side secret and should not be public.
+const SANDBOX = process.env.EBAY_ENVIRONMENT !== "production";
 
 const EBAY_CONFIG = {
   clientId: process.env.EBAY_CLIENT_ID || "",

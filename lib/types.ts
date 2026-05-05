@@ -1,23 +1,28 @@
 // Shared types used across the app.
 
-export type Game =
-  | "pokemon"
-  | "mtg"
-  | "yugioh"
-  | "onepiece"
-  | "gundam"
-  | "vanguard"
-  | "digimon"
-  | "lorcana"
-  | "dragonball"
-  | "fleshandblood"
-  | "weissschwarz"
-  | "finalfantasy"
-  | "unionarena"
-  | "battlespirits"
-  | "riftbound"
-  | "sports"
-  | "other";
+// Canonical list of all supported game identifiers.
+// Derive the union type from this array so validation stays in sync automatically.
+export const GAMES = [
+  "pokemon",
+  "mtg",
+  "yugioh",
+  "onepiece",
+  "gundam",
+  "vanguard",
+  "digimon",
+  "lorcana",
+  "dragonball",
+  "fleshandblood",
+  "weissschwarz",
+  "finalfantasy",
+  "unionarena",
+  "battlespirits",
+  "riftbound",
+  "sports",
+  "other",
+] as const;
+
+export type Game = (typeof GAMES)[number];
 
 export const GAME_LABELS: Record<Game, string> = {
   pokemon: "Pokémon",

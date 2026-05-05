@@ -244,17 +244,22 @@ async function enrichWithJustTcg(hit: LookupHit): Promise<LookupHit> {
 
 async function lookupScryfall(input: LookupInput): Promise<LookupHit | null> {
   const { name, setCode, collectorNumber } = input;
-  // If we have set + number, prefer the exact endpoint.
-  if (setCode && collectorNumber) {
-    const url = `https://api.scryfall.com/cards/${encodeURIComponent(setCode.toLowerCase())}/${encodeURIComponent(collectorNumber)}`;
-    const res = await fetch(url);
-    if (res.ok) return scryfallToHit(await res.json());
+  const timeout = { signal: AbortSignal.timeout(8000) };
+  try {
+    // If we have set + number, prefer the exact endpoint.
+    if (setCode && collectorNumber) {
+      const url = `https://api.scryfall.com/cards/${encodeURIComponent(setCode.toLowerCase())}/${encodeURIComponent(collectorNumber)}`;
+      const res = await fetch(url, timeout);
+      if (res.ok) return scryfallToHit(await res.json());
+    }
+    // Fallback: named fuzzy search.
+    const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`;
+    const res = await fetch(url, timeout);
+    if (!res.ok) return null;
+    return scryfallToHit(await res.json());
+  } catch {
+    return null;
   }
-  // Fallback: named fuzzy search.
-  const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return scryfallToHit(await res.json());
 }
 
 function scryfallToHit(card: any): LookupHit {

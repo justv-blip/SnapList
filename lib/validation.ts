@@ -13,10 +13,10 @@ export function isOneOf<T extends string>(value: unknown, allowed: readonly T[])
   return typeof value === "string" && allowed.includes(value as T);
 }
 
-/** Validate a game identifier. */
-const VALID_GAMES = ["mtg", "pokemon", "yugioh", "onepiece", "digimon", "lorcana"] as const;
-export function isValidGame(game: unknown): game is typeof VALID_GAMES[number] {
-  return isOneOf(game, VALID_GAMES);
+/** Validate a game identifier. Derived from the canonical GAMES array in lib/types.ts. */
+import { GAMES } from "@/lib/types";
+export function isValidGame(game: unknown): game is (typeof GAMES)[number] {
+  return isOneOf(game, GAMES);
 }
 
 /** Validate export format. */

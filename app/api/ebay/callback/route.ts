@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { exchangeCode, saveTokens } from "@/lib/ebay/client";
 
 export async function GET(request: NextRequest) {
@@ -45,6 +46,36 @@ export async function GET(request: NextRequest) {
   if (!userId) {
     settingsUrl.searchParams.set("ebay", "error");
     settingsUrl.searchParams.set("ebay_msg", "Invalid state format");
+    return NextResponse.redirect(settingsUrl);
+  }
+
+  // Security: verify the authenticated session belongs to the user in the state.
+  // Prevents an attacker who obtained a valid state token from linking their eBay
+  // account to a different user's SnapList account.
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => cookieStore.getAll(),
+          setAll: (toSet) => {
+            toSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== userId) {
+      settingsUrl.searchParams.set("ebay", "error");
+      settingsUrl.searchParams.set("ebay_msg", "Session mismatch — please try again");
+      return NextResponse.redirect(settingsUrl);
+    }
+  } catch {
+    settingsUrl.searchParams.set("ebay", "error");
+    settingsUrl.searchParams.set("ebay_msg", "Could not verify session");
     return NextResponse.redirect(settingsUrl);
   }
 

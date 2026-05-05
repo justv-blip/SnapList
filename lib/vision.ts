@@ -8,6 +8,7 @@
 // Temperature 0 on all calls for deterministic results.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { GAMES } from "./types";
 import type { Game, VisionGuess } from "./types";
 
 const MODEL = "claude-haiku-4-5-20251001";
@@ -337,44 +338,10 @@ export async function identifyCard(input: VisionInput): Promise<VisionGuess> {
 }
 
 // ---------------------------------------------------------------------------
-// Kept for tests / direct callers that still parse raw text
-// ---------------------------------------------------------------------------
-
-export function parseVisionResponse(raw: string): VisionGuess {
-  if (!raw) return { game: null, name: null, confidence: 0, reasoning: "empty response" };
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  const jsonStr = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-  try {
-    const parsed = JSON.parse(jsonStr);
-    return {
-      game: validGame(parsed.game),
-      name: parsed.name || null,
-      setName: parsed.setName || null,
-      setCode: parsed.setCode || null,
-      collectorNumber: parsed.collectorNumber || null,
-      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
-      reasoning: parsed.reasoning || undefined,
-      isCardBack: parsed.isCardBack === true,
-      language: parsed.language || undefined,
-    };
-  } catch {
-    return { game: null, name: null, confidence: 0, reasoning: "Vision returned unparseable JSON." };
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const VALID_GAMES: Game[] = [
-  "pokemon", "mtg", "yugioh", "onepiece", "gundam", "vanguard",
-  "digimon", "lorcana", "dragonball", "fleshandblood", "weissschwarz",
-  "finalfantasy", "unionarena", "battlespirits", "riftbound", "sports", "other",
-];
-
 function validGame(g: unknown): Game | null {
-  if (typeof g === "string" && (VALID_GAMES as string[]).includes(g)) return g as Game;
+  if (typeof g === "string" && (GAMES as readonly string[]).includes(g)) return g as Game;
   return null;
 }

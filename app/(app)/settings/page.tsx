@@ -62,6 +62,7 @@ export default function SettingsPage() {
   const [ebayLoading, setEbayLoading] = useState(true);
   const [ebayDisconnecting, setEbayDisconnecting] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [upgradeTier, setUpgradeTier] = useState<string>("starter");
   // Scanning / listing preference state (persisted in localStorage)
   const [defaultGame, setDefaultGamePref] = useState("pokemon");
   const [defaultCamera, setDefaultCamera] = useState("environment");
@@ -107,7 +108,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier: "pro", interval: "monthly" }),
+        body: JSON.stringify({ tier: upgradeTier, interval: "monthly" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start checkout");
@@ -354,11 +355,22 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Upgrade CTA note */}
+        {/* Upgrade CTA — plan selector + note */}
         {tier === "free" && (
-          <p className="text-[10px] text-muted mt-3">
-            You&apos;ll be taken to a secure Stripe checkout page.
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select
+              className="input text-xs py-1.5 px-2 w-auto"
+              value={upgradeTier}
+              onChange={(e) => setUpgradeTier(e.target.value)}
+            >
+              <option value="starter">Lister — $12/mo (300 scans)</option>
+              <option value="pro">Pro — $29/mo (1,500 scans)</option>
+              <option value="business">Business — $59/mo (6,000 scans)</option>
+            </select>
+            <p className="text-[10px] text-muted">
+              You&apos;ll be taken to a secure Stripe checkout page.
+            </p>
+          </div>
         )}
       </div>
 

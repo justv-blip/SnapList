@@ -22,7 +22,6 @@ export async function middleware(request: NextRequest) {
   // ── Rate-limit auth endpoints ──
   if (
     pathname === "/login" ||
-    pathname === "/signup" ||
     pathname.startsWith("/auth/")
   ) {
     if (request.method === "POST") {
