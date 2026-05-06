@@ -58,6 +58,66 @@ export const GAMES_WITH_PRICING: Game[] = [
 // Legacy alias — kept for backward compat in components that reference it
 export const GAMES_WITH_API: Game[] = GAMES_WITH_DEDICATED_API;
 
+// ── Sealed Products ───────────────────────────────────────────────────────────
+
+export type SealedProductType =
+  | "booster_pack"
+  | "booster_box"
+  | "elite_trainer_box"
+  | "tin"
+  | "bundle"
+  | "collection_box"
+  | "starter_deck"
+  | "blister_pack"
+  | "promo_pack"
+  | "case"
+  | "other";
+
+export const SEALED_PRODUCT_LABELS: Record<SealedProductType, string> = {
+  booster_pack:      "Booster Pack",
+  booster_box:       "Booster Box",
+  elite_trainer_box: "Elite Trainer Box",
+  tin:               "Tin",
+  bundle:            "Bundle / Value Pack",
+  collection_box:    "Collection Box",
+  starter_deck:      "Starter / Theme Deck",
+  blister_pack:      "Blister Pack",
+  promo_pack:        "Promo Pack",
+  case:              "Case",
+  other:             "Other Sealed",
+};
+
+export type SealedCondition = "sealed" | "opened" | "box_damage";
+
+export const SEALED_CONDITION_LABELS: Record<SealedCondition, string> = {
+  sealed:     "Factory Sealed",
+  opened:     "Opened",
+  box_damage: "Box Damage (contents sealed)",
+};
+
+/** Structured output from the sealed-product vision model. */
+export interface SealedGuess {
+  game: Game | null;
+  productName: string | null;
+  productType: SealedProductType | null;
+  setName: string | null;
+  language: string | null;
+  /** e.g. "1st Edition", "Unlimited", "Shadowless" */
+  edition: string | null;
+  confidence: number;
+  reasoning: string;
+}
+
+/** Full result returned from /api/scan-sealed */
+export interface SealedScanResult {
+  id: string;
+  guess: SealedGuess;
+  marketPriceUsd?: number;
+  priceSource?: string;
+  priceSampleSize?: number;
+  condition: SealedCondition;
+}
+
 export type Condition =
   | "Near Mint"
   | "Lightly Played"
