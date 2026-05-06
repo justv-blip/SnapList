@@ -660,8 +660,12 @@ function resultToCard(
     ? "vision"
     : "manual";
 
-  // Batch config condition > profile condition > default
-  const condition: Condition = config?.defaultCondition || (profile?.defaultCondition as Condition) || "Near Mint";
+  // Priority: batch config > AI estimate from scan > profile default > "Near Mint"
+  const condition: Condition =
+    config?.defaultCondition ||
+    (guess?.conditionEstimate as Condition | null | undefined) ||
+    (profile?.defaultCondition as Condition) ||
+    "Near Mint";
   const language = guess?.language || config?.language || profile?.language || "English";
 
   // Determine foil from batch config finish, then profile, then default false

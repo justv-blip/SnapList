@@ -356,6 +356,8 @@ export interface VisionGuess {
   reasoning?: string;
   isCardBack?: boolean; // true when the image shows the reverse side of a card
   language?: string; // detected card language (e.g. "English", "Japanese", "Korean")
+  /** AI-estimated card condition based on visible wear in the scan photo. */
+  conditionEstimate?: Condition | null;
 }
 
 // Result from the /api/scan endpoint, one entry per uploaded image.

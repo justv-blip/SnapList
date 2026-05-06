@@ -64,6 +64,11 @@ const IDENTIFY_TOOL: Anthropic.Tool = {
       isCardBack: {
         type: "boolean",
         description: "True if this is the back/reverse side of a card — shows game logo/pattern but no card-specific info."
+      },
+      conditionEstimate: {
+        type: "string",
+        enum: ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"],
+        description: "Estimated physical condition of the card based on visible surface wear in the scan photo. Only set when isCardBack is false and the card surface is clearly visible. Near Mint = no visible wear; Lightly Played = minor edge/corner wear; Moderately Played = noticeable whitening/creases; Heavily Played = heavy wear, multiple creases; Damaged = major damage, tears, or water marks. Omit if photo quality is too low to assess condition reliably."
       }
     },
     required: ["confidence", "reasoning", "isCardBack"]
@@ -291,6 +296,15 @@ async function runIdentification(
   }
 
   const raw = toolUse.input as Record<string, unknown>;
+
+  const VALID_CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"] as const;
+  type RawCondition = typeof VALID_CONDITIONS[number];
+  const rawCond = raw.conditionEstimate as string | undefined;
+  const conditionEstimate: RawCondition | null =
+    rawCond && VALID_CONDITIONS.includes(rawCond as RawCondition)
+      ? (rawCond as RawCondition)
+      : null;
+
   return {
     game: validGame(raw.game),
     name: (raw.name as string) || null,
@@ -301,6 +315,7 @@ async function runIdentification(
     confidence: typeof raw.confidence === "number" ? raw.confidence : 0,
     reasoning: (raw.reasoning as string) || undefined,
     isCardBack: raw.isCardBack === true,
+    conditionEstimate: conditionEstimate || null,
   };
 }
 

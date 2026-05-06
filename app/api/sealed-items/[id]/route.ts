@@ -53,7 +53,7 @@ export async function PATCH(
   }
 
   // Only allow patching safe fields
-  const allowed = ["condition", "notes", "market_price_usd"] as const;
+  const allowed = ["condition", "notes", "market_price_usd", "purchase_price_usd"] as const;
   const patch: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) patch[key] = body[key];
