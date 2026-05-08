@@ -10,6 +10,8 @@ import {
   Download,
   Copy,
   Check,
+  ShoppingBag,
+  CheckCircle2,
 } from "lucide-react";
 import {
   LineChart,
@@ -25,6 +27,7 @@ import type { PriceTrend } from "@/lib/priceHistory";
 interface Props {
   card: ScannedCard & { batchName?: string; batchId?: string };
   onClose: () => void;
+  onUpdate?: (patch: Partial<ScannedCard>) => void;
 }
 
 function ChangeBadge({ pct, label }: { pct: number; label: string }) {
@@ -43,8 +46,14 @@ function ChangeBadge({ pct, label }: { pct: number; label: string }) {
   );
 }
 
-export default function CardDetailModal({ card, onClose }: Props) {
+export default function CardDetailModal({ card, onClose, onUpdate }: Props) {
   const [trend, setTrend] = useState<PriceTrend | null | undefined>(undefined); // undefined = loading
+  const [ebayConnected, setEbayConnected] = useState(false);
+  const [ebayListing, setEbayListing] = useState(false);
+  const [ebayError, setEbayError] = useState<string | null>(null);
+  const [listedUrl, setListedUrl] = useState<string | null>(
+    card.ebayListingId ? `https://www.ebay.com/itm/${card.ebayListingId}` : null
+  );
 
   // Fetch price history on mount
   useEffect(() => {
@@ -65,6 +74,13 @@ export default function CardDetailModal({ card, onClose }: Props) {
       .catch(() => setTrend(null));
   }, [card.game, card.name, card.setName]);
 
+  useEffect(() => {
+    fetch("/api/ebay/status")
+      .then((r) => r.json())
+      .then((d) => setEbayConnected(d.connected ?? false))
+      .catch(() => {});
+  }, []);
+
   // Close on backdrop click
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
@@ -78,6 +94,29 @@ export default function CardDetailModal({ card, onClose }: Props) {
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
+
+  const handleEbayList = async () => {
+    setEbayListing(true);
+    setEbayError(null);
+    try {
+      const res = await fetch("/api/ebay/list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cards: [card], config: {} }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Listing failed");
+      const result = data.results?.[0];
+      if (!result?.success) throw new Error(result?.error || "Listing failed");
+      const url = result.url ?? `https://www.ebay.com/itm/${result.listingId}`;
+      setListedUrl(url);
+      onUpdate?.({ ebayListingId: result.listingId, ebayOfferId: result.offerId });
+    } catch (err: unknown) {
+      setEbayError(err instanceof Error ? err.message : "Listing failed");
+    } finally {
+      setEbayListing(false);
+    }
+  };
 
   const imageUrl = card.imageUrl ?? card.uploadedImageDataUrl ?? card.photos?.[0]?.dataUrl;
 
@@ -210,6 +249,43 @@ export default function CardDetailModal({ card, onClose }: Props) {
               <p className="text-xs text-muted uppercase tracking-wider mb-3">Quick Export</p>
               <QuickExportButtons card={card} />
             </div>
+
+            {/* eBay Direct Listing */}
+            {ebayConnected && (
+              <div>
+                <p className="text-xs text-muted uppercase tracking-wider mb-3">eBay Listing</p>
+                {listedUrl ? (
+                  <a
+                    href={listedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/15 transition-colors"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Listed on eBay
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleEbayList}
+                      disabled={ebayListing}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-panel2 border border-border hover:border-accent/40 transition-colors disabled:opacity-50 w-fit"
+                    >
+                      {ebayListing ? (
+                        <><Loader2 className="w-4 h-4 animate-spin text-muted" /> Listing…</>
+                      ) : (
+                        <><ShoppingBag className="w-4 h-4 text-muted" /> List on eBay</>
+                      )}
+                    </button>
+                    {ebayError && (
+                      <p className="text-xs text-danger">{ebayError}</p>
+                    )}
+                    <p className="text-[10px] text-muted">Uses market price · Good &apos;Til Cancelled</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Price History section */}
             <div>

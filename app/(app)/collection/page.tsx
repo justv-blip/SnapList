@@ -37,6 +37,7 @@ import {
   Heart,
 } from "lucide-react";
 import { getAllBatches, type Batch } from "@/lib/supabaseStore";
+import ShareCollectionButton from "@/components/ShareCollectionButton";
 import type { ScannedCard, Game, Condition, SealedCondition } from "@/lib/types";
 import { GAME_LABELS, CONDITIONS, GRADING_COMPANY_LABELS, SEALED_PRODUCT_LABELS, SEALED_CONDITION_LABELS } from "@/lib/types";
 import { useToast } from "@/components/Toast";
@@ -117,7 +118,7 @@ function CollectionContent() {
   const snapshotRecorded = useRef(false);
 
   // Card detail modal
-  const [selectedCard, setSelectedCard] = useState<(ScannedCard & { batchName?: string }) | null>(null);
+  const [selectedCard, setSelectedCard] = useState<(ScannedCard & { batchName?: string; batchId?: string }) | null>(null);
 
   // Export multi-select (cards tab list view)
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
@@ -136,12 +137,19 @@ function CollectionContent() {
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  const [userId, setUserId] = useState<string | null>(null);
+
   const { toast } = useToast();
 
   useEffect(() => {
     loadCards();
     loadSealed();
     loadPortfolioSnapshots();
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient().auth.getUser().then(({ data }) => {
+        if (data.user) setUserId(data.user.id);
+      });
+    });
   }, []);
 
   const loadCards = async () => {
@@ -404,6 +412,9 @@ function CollectionContent() {
             )}
           </p>
         </div>
+        {userId && allCards.length > 0 && (
+          <ShareCollectionButton userId={userId} />
+        )}
       </div>
 
       {/* Portfolio chart — always visible */}
@@ -709,7 +720,29 @@ function CollectionContent() {
 
       {/* ── CARD DETAIL MODAL ─────────────────────────────────────── */}
       {selectedCard && (
-        <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+        <CardDetailModal
+          card={selectedCard}
+          onClose={() => setSelectedCard(null)}
+          onUpdate={async (patch) => {
+            if (!selectedCard.batchId) return;
+            // Update local state immediately for instant UI feedback
+            setSelectedCard((prev) => prev ? { ...prev, ...patch } : prev);
+            // Persist to Supabase: fetch batch, patch the card, save
+            try {
+              const { getBatch, updateBatchCards } = await import("@/lib/supabaseStore");
+              const batch = await getBatch(selectedCard.batchId);
+              if (!batch) return;
+              const updatedCards = batch.cards.map((c) =>
+                c.id === selectedCard.id ? { ...c, ...patch } : c
+              );
+              await updateBatchCards(selectedCard.batchId, updatedCards);
+              // Refresh batches so the collection list updates
+              loadCards();
+            } catch {
+              // non-critical — UI already updated optimistically
+            }
+          }}
+        />
       )}
     </div>
   );
