@@ -211,7 +211,6 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
 export default function DashboardPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"metrics" | "batches">("metrics");
   const [usageData, setUsageData] = useState<ScanUsageProps | null>(null);
   const [wishlistCount, setWishlistCount] = useState<number | null>(null);
   const { toast } = useToast();
@@ -322,22 +321,6 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs">
-            <button
-              className={`px-3 py-1.5 transition-colors ${view === "metrics" ? "bg-accent/15 text-accent" : "bg-panel2 text-muted hover:text-white"}`}
-              onClick={() => setView("metrics")}
-            >
-              <BarChart3 className="w-3.5 h-3.5 inline mr-1" />
-              Metrics
-            </button>
-            <button
-              className={`px-3 py-1.5 transition-colors ${view === "batches" ? "bg-accent/15 text-accent" : "bg-panel2 text-muted hover:text-white"}`}
-              onClick={() => setView("batches")}
-            >
-              <Package className="w-3.5 h-3.5 inline mr-1" />
-              Batches
-            </button>
-          </div>
           <Link href="/scan" className="btn-primary">
             <ScanLine className="w-4 h-4" />
             New Scan
@@ -360,14 +343,31 @@ export default function DashboardPage() {
           <BatchSkeleton />
           <BatchSkeleton />
         </div>
-      ) : view === "metrics" ? (
-        <MetricsView metrics={metrics} batches={batches} wishlistCount={wishlistCount} />
       ) : (
-        <BatchesView
-          batches={batches}
-          onDelete={handleDelete}
-          onStatusToggle={handleStatusToggle}
-        />
+        <>
+          {/* Metrics always visible */}
+          <MetricsView metrics={metrics} batches={batches} wishlistCount={wishlistCount} />
+
+          {/* Batch list — shown below metrics when there are batches */}
+          {batches.length > 0 && (
+            <>
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-accent" />
+                  <h2 className="font-semibold text-sm">Recent Batches</h2>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-accent/10 border-accent/20 text-accent">
+                    {batches.length}
+                  </span>
+                </div>
+              </div>
+              <BatchesView
+                batches={batches}
+                onDelete={handleDelete}
+                onStatusToggle={handleStatusToggle}
+              />
+            </>
+          )}
+        </>
       )}
     </div>
   );

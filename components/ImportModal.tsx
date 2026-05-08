@@ -82,13 +82,15 @@ interface ImportResult {
 interface Props {
   onClose: () => void;
   onImported: (result: ImportResult) => void;
+  /** When true, renders as an inline card instead of a fixed modal overlay */
+  inline?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type Step = "upload" | "preview" | "importing" | "done";
 
-export default function ImportModal({ onClose, onImported }: Props) {
+export default function ImportModal({ onClose, onImported, inline = false }: Props) {
   const [step, setStep] = useState<Step>("upload");
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [fileName, setFileName] = useState("");
@@ -186,12 +188,8 @@ export default function ImportModal({ onClose, onImported }: Props) {
     ["name", "Name", "card name", "Card Name"].includes(k)
   );
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-panel border border-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+  const inner = (
+    <>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
@@ -200,9 +198,11 @@ export default function ImportModal({ onClose, onImported }: Props) {
               Import up to 2,000 cards from a spreadsheet
             </p>
           </div>
-          <button onClick={onClose} className="btn p-1.5">
-            <X className="w-4 h-4" />
-          </button>
+          {!inline && (
+            <button onClick={onClose} className="btn p-1.5">
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         <div className="p-6 space-y-5">
@@ -403,6 +403,24 @@ export default function ImportModal({ onClose, onImported }: Props) {
             </div>
           )}
         </div>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="bg-panel border border-border rounded-2xl w-full overflow-hidden">
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-panel border border-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        {inner}
       </div>
     </div>
   );

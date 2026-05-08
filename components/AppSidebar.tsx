@@ -115,19 +115,56 @@ export default function AppSidebar() {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-panel border-t border-border flex items-center justify-around px-2 py-1 safe-bottom">
-        {[...MENU_NAV, ...TOOLS_NAV.slice(0, 1), ...OPTIONS_NAV.slice(0, 1)].map((item) => {
-          const active = item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href);
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-panel border-t border-border flex items-center justify-around px-2 pb-1 pt-1 safe-bottom">
+        {/* Left group: Dashboard, Collection */}
+        {[MENU_NAV[0], MENU_NAV[3]].map((item) => {
+          const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg text-[10px] font-medium transition-colors ${
-                active
-                  ? "text-accent"
-                  : "text-muted hover:text-white"
+                active ? "text-accent" : "text-muted hover:text-white"
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        {/* Centre FAB — Scan */}
+        <Link
+          href="/scan"
+          className={`flex flex-col items-center gap-0.5 -mt-5 transition-all ${
+            pathname.startsWith("/scan")
+              ? "opacity-100"
+              : "opacity-90 hover:opacity-100"
+          }`}
+        >
+          <div
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-accent/30 transition-colors ${
+              pathname.startsWith("/scan")
+                ? "bg-accent scale-105"
+                : "bg-accent hover:bg-accent/90"
+            }`}
+          >
+            <ScanLine className="w-6 h-6 text-black" />
+          </div>
+          <span className={`text-[10px] font-semibold mt-0.5 ${pathname.startsWith("/scan") ? "text-accent" : "text-muted"}`}>
+            Scan
+          </span>
+        </Link>
+
+        {/* Right group: Tools, Settings */}
+        {[TOOLS_NAV[0], OPTIONS_NAV[0]].map((item) => {
+          const active = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg text-[10px] font-medium transition-colors ${
+                active ? "text-accent" : "text-muted hover:text-white"
               }`}
             >
               <item.icon className="w-5 h-5" />

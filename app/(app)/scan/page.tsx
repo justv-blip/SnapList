@@ -9,7 +9,7 @@ import SealedScanner from "@/components/SealedScanner";
 import GradedScanner from "@/components/GradedScanner";
 import ImportModal from "@/components/ImportModal";
 
-type ScanMode = "cards" | "sealed" | "graded";
+type ScanMode = "cards" | "sealed" | "graded" | "import";
 
 function ScanContent() {
   const params = useSearchParams();
@@ -17,7 +17,6 @@ function ScanContent() {
   const batchId = params.get("batch") || undefined;
 
   const [mode, setMode] = useState<ScanMode>("cards");
-  const [showImport, setShowImport] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,36 +41,16 @@ function ScanContent() {
               : "Scan cards, sealed products, and graded slabs — prices pulled automatically"}
           </p>
         </div>
-        {!batchId && (
-          <button
-            className="btn shrink-0 text-xs flex items-center gap-2"
-            onClick={() => setShowImport(true)}
-            title="Bulk import cards from a CSV file"
-          >
-            <Upload className="w-4 h-4" />
-            CSV Import
-          </button>
-        )}
       </div>
-
-      {showImport && (
-        <ImportModal
-          onClose={() => setShowImport(false)}
-          onImported={(result) => {
-            setShowImport(false);
-            router.push(`/scan?batch=${result.batchId}`);
-          }}
-        />
-      )}
 
       {/* Mode toggle — hidden when reviewing a specific batch */}
       {!batchId && (
-        <div className="flex gap-2 p-1 rounded-xl bg-surface-2 border border-border w-fit">
+        <div className="flex gap-2 p-1 rounded-xl bg-surface-2 border border-border w-fit flex-wrap">
           <button
             onClick={() => setMode("cards")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               mode === "cards"
-                ? "bg-brand text-white shadow-sm"
+                ? "bg-accent text-black shadow-sm"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -82,7 +61,7 @@ function ScanContent() {
             onClick={() => setMode("sealed")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               mode === "sealed"
-                ? "bg-brand text-white shadow-sm"
+                ? "bg-accent text-black shadow-sm"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -100,6 +79,18 @@ function ScanContent() {
             <Award className="w-4 h-4" />
             Graded
           </button>
+          {/* CSV Import — first-class mode, not a hidden header button */}
+          <button
+            onClick={() => setMode("import")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              mode === "import"
+                ? "bg-panel border border-border text-foreground shadow-sm"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <Upload className="w-4 h-4" />
+            CSV Import
+          </button>
         </div>
       )}
 
@@ -108,8 +99,16 @@ function ScanContent() {
         <Scanner batchId={batchId} />
       ) : mode === "sealed" ? (
         <SealedScanner />
-      ) : (
+      ) : mode === "graded" ? (
         <GradedScanner />
+      ) : (
+        <ImportModal
+          inline
+          onClose={() => setMode("cards")}
+          onImported={(result) => {
+            router.push(`/scan?batch=${result.batchId}`);
+          }}
+        />
       )}
     </div>
   );
