@@ -1,33 +1,58 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { CreditCard, Package } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { CreditCard, Package, Award, Upload } from "lucide-react";
 import Scanner from "@/components/Scanner";
 import SealedScanner from "@/components/SealedScanner";
+import GradedScanner from "@/components/GradedScanner";
+import ImportModal from "@/components/ImportModal";
 
-type ScanMode = "cards" | "sealed";
+type ScanMode = "cards" | "sealed" | "graded";
 
 function ScanContent() {
   const params = useSearchParams();
+  const router = useRouter();
   const batchId = params.get("batch") || undefined;
 
-  // If a batchId is provided, go straight to card scanner (batch review)
-  const [mode, setMode] = useState<ScanMode>(batchId ? "cards" : "cards");
+  const [mode, setMode] = useState<ScanMode>("cards");
+  const [showImport, setShowImport] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {batchId ? "Review Batch" : "Scan"}
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          {batchId
-            ? "Review, edit, and export this batch"
-            : "Identify cards and sealed products — prices pulled automatically"}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {batchId ? "Review Batch" : "Scan"}
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            {batchId
+              ? "Review, edit, and export this batch"
+              : "Scan cards, sealed products, and graded slabs — prices pulled automatically"}
+          </p>
+        </div>
+        {!batchId && (
+          <button
+            className="btn shrink-0 text-xs flex items-center gap-2"
+            onClick={() => setShowImport(true)}
+            title="Bulk import cards from a CSV file"
+          >
+            <Upload className="w-4 h-4" />
+            CSV Import
+          </button>
+        )}
       </div>
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImported={(result) => {
+            setShowImport(false);
+            router.push(`/scan?batch=${result.batchId}`);
+          }}
+        />
+      )}
 
       {/* Mode toggle — hidden when reviewing a specific batch */}
       {!batchId && (
@@ -52,7 +77,18 @@ function ScanContent() {
             }`}
           >
             <Package className="w-4 h-4" />
-            Sealed Products
+            Sealed
+          </button>
+          <button
+            onClick={() => setMode("graded")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              mode === "graded"
+                ? "bg-amber-500 text-black shadow-sm"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            Graded
           </button>
         </div>
       )}
@@ -60,8 +96,10 @@ function ScanContent() {
       {/* Content */}
       {mode === "cards" ? (
         <Scanner batchId={batchId} />
-      ) : (
+      ) : mode === "sealed" ? (
         <SealedScanner />
+      ) : (
+        <GradedScanner />
       )}
     </div>
   );

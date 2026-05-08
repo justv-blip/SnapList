@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#7c9cff",
+  themeColor: "#5cd4a0",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="dark" data-accent="blue" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" data-accent="green" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var m=localStorage.getItem('tcg-theme-mode');var a=localStorage.getItem('tcg-theme-accent');if(m)document.documentElement.setAttribute('data-theme',m);if(a)document.documentElement.setAttribute('data-accent',a);}catch(e){}})()` }} />

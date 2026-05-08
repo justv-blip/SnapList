@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/reset-scans",
       "schedule": "5 0 1 * *"
+    },
+    {
+      "path": "/api/cron/price-alerts",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/auto-reprice",
+      "schedule": "0 10 * * *"
     }
   ]
 }

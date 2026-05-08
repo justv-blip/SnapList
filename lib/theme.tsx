@@ -23,7 +23,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue>({
   mode: "dark",
-  accent: "blue",
+  accent: "green",
   setMode: () => {},
   setAccent: () => {},
 });
@@ -44,7 +44,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setModeState(getStoredValue("tcg-theme-mode", "dark"));
-    setAccentState(getStoredValue("tcg-theme-accent", "blue"));
+    setAccentState(getStoredValue("tcg-theme-accent", "green"));
     setMounted(true);
   }, []);
 

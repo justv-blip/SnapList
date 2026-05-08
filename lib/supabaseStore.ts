@@ -71,6 +71,14 @@ function dbCardToScanned(
     externalUrl: (row.external_url as string) || undefined,
     listingTitle: (row.listing_title as string) || undefined,
     listingDescription: (row.listing_description as string) || undefined,
+    sku: (row.sku as string) || undefined,
+    ebayListingId: (row.ebay_listing_id as string) || undefined,
+    ebayOfferId: (row.ebay_offer_id as string) || undefined,
+    // Grading
+    slabbed: Boolean(row.slabbed),
+    grading: row.grading
+      ? (typeof row.grading === "string" ? JSON.parse(row.grading) : row.grading)
+      : undefined,
     createdAt: new Date(row.created_at as string).getTime(),
   };
 }
@@ -103,6 +111,12 @@ function scannedToDbCard(
     external_url: card.externalUrl || null,
     listing_title: card.listingTitle || null,
     listing_description: card.listingDescription || null,
+    sku: card.sku || null,
+    ebay_listing_id: card.ebayListingId || null,
+    ebay_offer_id: card.ebayOfferId || null,
+    // Grading
+    slabbed: card.slabbed || false,
+    grading: card.grading ? card.grading : null,
   };
 }
 

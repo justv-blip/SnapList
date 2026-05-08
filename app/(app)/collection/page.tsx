@@ -33,6 +33,7 @@ import {
   Minus,
   Pencil,
   Check,
+  Heart,
 } from "lucide-react";
 import { getAllBatches, type Batch } from "@/lib/supabaseStore";
 import type { ScannedCard, Game, Condition, SealedCondition } from "@/lib/types";
@@ -41,10 +42,11 @@ import { useToast } from "@/components/Toast";
 import { BatchSkeleton } from "@/components/Skeleton";
 import { detectDuplicates, type DuplicateGroup } from "@/lib/duplicates";
 import { PortfolioChart, type PortfolioSnapshot } from "@/components/PortfolioChart";
+import WishlistTab from "@/components/WishlistTab";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type CollectionTab = "cards" | "sealed" | "sets";
+type CollectionTab = "cards" | "sealed" | "sets" | "wishlist";
 type ViewMode = "grid" | "list" | "duplicates";
 type SortField = "name" | "price" | "date" | "game";
 type SortDir = "asc" | "desc";
@@ -443,6 +445,15 @@ export default function CollectionPage() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setTab("wishlist")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === "wishlist" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"
+          }`}
+        >
+          <Heart className="w-4 h-4" />
+          Wishlist
+        </button>
       </div>
 
       {/* Export bar — floats above cards when cards are selected */}
@@ -673,6 +684,11 @@ export default function CollectionPage() {
       {/* ── SETS TAB ─────────────────────────────────────────────── */}
       {tab === "sets" && (
         <SetsTab groups={setGroups} />
+      )}
+
+      {/* ── WISHLIST TAB ──────────────────────────────────────────── */}
+      {tab === "wishlist" && (
+        <WishlistTab />
       )}
     </div>
   );

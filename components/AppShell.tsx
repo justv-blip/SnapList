@@ -1,4 +1,5 @@
 import AppSidebar from "./AppSidebar";
+import InstallPrompt from "./InstallPrompt";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <InstallPrompt />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   Unlink,
   Sun,
   Moon,
+  RefreshCw,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
@@ -64,6 +65,12 @@ export default function SettingsPage() {
   const [billingLoading, setBillingLoading] = useState(false);
   const [upgradeTier, setUpgradeTier] = useState<string>("starter");
   const [rolloverScans, setRolloverScans] = useState(0);
+  // Auto-reprice state (persisted in Supabase profiles)
+  const [autoRepriceEnabled, setAutoRepriceEnabled] = useState(false);
+  const [autoRepriceThreshold, setAutoRepriceThreshold] = useState(10);
+  const [autoRepriceLastRun, setAutoRepriceLastRun] = useState<string | null>(null);
+  const [autoRepriceLoading, setAutoRepriceLoading] = useState(false);
+  const [autoRepriceSaving, setAutoRepriceSaving] = useState(false);
   // Scanning / listing preference state (persisted in localStorage)
   const [defaultGame, setDefaultGamePref] = useState("pokemon");
   const [defaultCamera, setDefaultCamera] = useState("environment");
@@ -150,6 +157,42 @@ export default function SettingsPage() {
     }
   };
 
+  const loadAutoReprice = async () => {
+    setAutoRepriceLoading(true);
+    try {
+      const res = await fetch("/api/settings/auto-reprice");
+      if (res.ok) {
+        const data = await res.json();
+        setAutoRepriceEnabled(data.enabled);
+        setAutoRepriceThreshold(data.thresholdPct);
+        setAutoRepriceLastRun(data.lastRunAt);
+      }
+    } catch { /* ignore */ } finally {
+      setAutoRepriceLoading(false);
+    }
+  };
+
+  const saveAutoReprice = async (enabled: boolean, thresholdPct: number) => {
+    setAutoRepriceSaving(true);
+    try {
+      const res = await fetch("/api/settings/auto-reprice", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, thresholdPct }),
+      });
+      if (res.ok) {
+        toast("success", "Auto-reprice settings saved");
+      } else {
+        const data = await res.json();
+        toast("error", data.error || "Failed to save auto-reprice settings");
+      }
+    } catch {
+      toast("error", "Failed to save auto-reprice settings");
+    } finally {
+      setAutoRepriceSaving(false);
+    }
+  };
+
   // Load saved settings on mount
   useEffect(() => {
     try {
@@ -179,6 +222,7 @@ export default function SettingsPage() {
       }
     }
     checkEbay();
+    loadAutoReprice();
 
     // Handle Stripe redirect params
     const params = new URLSearchParams(window.location.search);
@@ -527,6 +571,111 @@ export default function SettingsPage() {
           </a>
         )}
       </div>
+
+      {/* ── Auto-Reprice ── */}
+      {ebayConnected && (
+        <div className="card-panel">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-accent" />
+              <h2 className="font-semibold">Auto-Reprice</h2>
+            </div>
+            {autoRepriceLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-muted" />
+            ) : autoRepriceEnabled ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-accent2/10 border border-accent2/30 text-accent2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-panel2 border border-border text-muted">
+                Off
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-muted mb-5">
+            Once per day, SnapList checks your active eBay listings against current market prices
+            and automatically adjusts any that deviate beyond your threshold.
+          </p>
+
+          <div className="space-y-4">
+            {/* Enable toggle */}
+            <label className="flex items-center justify-between gap-4 cursor-pointer">
+              <div>
+                <p className="text-sm font-medium">Enable daily auto-repricing</p>
+                <p className="text-xs text-muted mt-0.5">Runs every morning at 10:00 UTC</p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={autoRepriceEnabled}
+                onClick={() => {
+                  const next = !autoRepriceEnabled;
+                  setAutoRepriceEnabled(next);
+                  saveAutoReprice(next, autoRepriceThreshold);
+                }}
+                disabled={autoRepriceSaving}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${
+                  autoRepriceEnabled ? "bg-accent2" : "bg-border"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    autoRepriceEnabled ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </label>
+
+            {/* Threshold */}
+            <div>
+              <label className="label">Reprice threshold (%)</label>
+              <div className="flex items-center gap-3 mt-1">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  className="input w-24"
+                  value={autoRepriceThreshold}
+                  onChange={(e) => setAutoRepriceThreshold(parseInt(e.target.value) || 10)}
+                  disabled={!autoRepriceEnabled}
+                />
+                <p className="text-xs text-muted">
+                  Only reprice listings that deviate more than {autoRepriceThreshold}% from market price
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                {autoRepriceLastRun ? (
+                  <p className="text-xs text-muted">
+                    Last run:{" "}
+                    <span className="text-foreground">
+                      {new Date(autoRepriceLastRun).toLocaleString()}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted">Never run yet</p>
+                )}
+              </div>
+              <button
+                className="btn text-xs flex items-center gap-2"
+                onClick={() => saveAutoReprice(autoRepriceEnabled, autoRepriceThreshold)}
+                disabled={autoRepriceSaving || !autoRepriceEnabled}
+              >
+                {autoRepriceSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                {autoRepriceSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Decision Rules ── */}
       <div className="card-panel">

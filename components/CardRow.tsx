@@ -124,7 +124,10 @@ export default function CardRow({ card, onChange, onRemove, onRelookup, onVerify
       });
       const data = await res.json();
       if (data.verified) {
-        onChange({
+        // Apply cert-verified data back to the card. Fill in card name / set
+        // if the card has no name yet (cert-first workflow) or if the user
+        // hasn't typed anything. Never overwrite a name the user has set.
+        const patch: Partial<ScannedCard> = {
           grading: {
             ...card.grading,
             grade: data.grade || card.grading.grade,
@@ -134,7 +137,10 @@ export default function CardRow({ card, onChange, onRemove, onRelookup, onVerify
             population: data.population || card.grading.population,
             label: data.label || card.grading.label,
           },
-        });
+        };
+        if (data.cardName && !card.name) patch.name = data.cardName;
+        if (data.setName && !card.setName) patch.setName = data.setName;
+        onChange(patch);
       } else {
         setGradeError(data.error || "Verification failed");
       }

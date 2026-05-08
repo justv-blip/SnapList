@@ -65,6 +65,9 @@ interface BusinessMetrics {
   scannedToday: number;
   scannedThisWeek: number;
   scannedThisMonth: number;
+  // New
+  gradedCards: number;
+  gradedValue: number;
 }
 
 function computeMetrics(batches: Batch[]): BusinessMetrics {
@@ -79,6 +82,8 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
   let totalListedValue = 0;
   let listedOnEbay = 0;
   let totalPhotos = 0;
+  let gradedCards = 0;
+  let gradedValue = 0;
 
   const gameMap = new Map<string, { count: number; value: number }>();
   const condMap = new Map<string, number>();
@@ -103,6 +108,11 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
     if (card.ebayListingId) {
       listedOnEbay++;
       totalListedValue += val;
+    }
+
+    if (card.slabbed) {
+      gradedCards++;
+      gradedValue += val;
     }
 
     // Game breakdown
@@ -189,6 +199,8 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
     scannedToday,
     scannedThisWeek,
     scannedThisMonth,
+    gradedCards,
+    gradedValue,
   };
 }
 
@@ -201,6 +213,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"metrics" | "batches">("metrics");
   const [usageData, setUsageData] = useState<ScanUsageProps | null>(null);
+  const [wishlistCount, setWishlistCount] = useState<number | null>(null);
   const { toast } = useToast();
 
   const refresh = async () => {
@@ -254,9 +267,20 @@ export default function DashboardPage() {
     } catch { /* non-critical */ }
   };
 
+  const loadWishlist = async () => {
+    try {
+      const res = await fetch("/api/wishlist");
+      if (!res.ok) return;
+      const data = await res.json();
+      const wanted = (data.items ?? []).filter((i: { found: boolean }) => !i.found).length;
+      setWishlistCount(wanted);
+    } catch { /* non-critical */ }
+  };
+
   useEffect(() => {
     refresh();
     loadUsage();
+    loadWishlist();
     const onFocus = () => { refresh(); };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -337,7 +361,7 @@ export default function DashboardPage() {
           <BatchSkeleton />
         </div>
       ) : view === "metrics" ? (
-        <MetricsView metrics={metrics} batches={batches} />
+        <MetricsView metrics={metrics} batches={batches} wishlistCount={wishlistCount} />
       ) : (
         <BatchesView
           batches={batches}
@@ -353,7 +377,7 @@ export default function DashboardPage() {
 // Metrics View
 // ---------------------------------------------------------------------------
 
-function MetricsView({ metrics, batches }: { metrics: BusinessMetrics; batches: Batch[] }) {
+function MetricsView({ metrics, batches, wishlistCount }: { metrics: BusinessMetrics; batches: Batch[]; wishlistCount: number | null }) {
   if (metrics.totalCards === 0) {
     return (
       <div className="card-panel flex flex-col items-center justify-center py-16 text-center">
@@ -391,16 +415,19 @@ function MetricsView({ metrics, batches }: { metrics: BusinessMetrics; batches: 
           sub={metrics.listedOnEbay > 0 ? `${metrics.listedOnEbay} on eBay` : undefined}
         />
         <KpiCard
-          label="Unlisted Potential"
-          value={`$${metrics.profitPotential.toFixed(2)}`}
-          icon={TrendingUp}
-          sub={`${metrics.unlistedCards} cards`}
-          accent={metrics.unlistedCards > 0}
+          label="Graded Slabs"
+          value={metrics.gradedCards > 0 ? String(metrics.gradedCards) : "—"}
+          icon={Award}
+          sub={metrics.gradedValue > 0 ? `$${metrics.gradedValue.toFixed(0)} value` : undefined}
+          href="/collection"
         />
         <KpiCard
-          label="Avg Card Value"
-          value={`$${metrics.avgCardValue.toFixed(2)}`}
+          label="Wanted"
+          value={wishlistCount != null ? String(wishlistCount) : "—"}
           icon={Target}
+          sub={wishlistCount === 0 ? "Nothing on wishlist" : wishlistCount === 1 ? "1 card to find" : `${wishlistCount} cards to find`}
+          accent={!!wishlistCount && wishlistCount > 0}
+          href="/collection"
         />
       </div>
 
@@ -671,15 +698,17 @@ function KpiCard({
   icon: Icon,
   accent,
   sub,
+  href,
 }: {
   label: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
   accent?: boolean;
   sub?: string;
+  href?: string;
 }) {
-  return (
-    <div className="card-panel flex items-center gap-3 py-4">
+  const inner = (
+    <div className={`card-panel flex items-center gap-3 py-4 ${href ? "hover:border-accent/40 transition-colors cursor-pointer" : ""}`}>
       <div
         className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
           accent
@@ -696,6 +725,7 @@ function KpiCard({
       </div>
     </div>
   );
+  return href ? <Link href={href}>{inner}</Link> : inner;
 }
 
 function ActivityStat({ label, value }: { label: string; value: number }) {

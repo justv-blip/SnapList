@@ -37,7 +37,7 @@ const MENU_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/scan", label: "Scan", icon: ScanLine },
   { href: "/templates", label: "Templates", icon: FileSliders },
-  { href: "/collection", label: "Catalog", icon: Library },
+  { href: "/collection", label: "Collection", icon: Library },
 ];
 
 // ── Tools: feature tools ──

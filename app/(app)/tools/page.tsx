@@ -18,6 +18,9 @@ import {
   Settings,
   Download,
   Info,
+  RefreshCw,
+  Webhook,
+  Upload,
 } from "lucide-react";
 import { MarketAnalysisPanel } from "@/components/MarketAnalysis";
 import { EbayRepricingTool } from "@/components/EbayRepricingTool";
@@ -76,7 +79,7 @@ function ToolCard({
       </div>
       {!isComingSoon && (
         <button
-          className="btn self-start mt-auto"
+          className="btn self-start mt-auto flex items-center gap-1.5"
           onClick={onAction}
         >
           {action}
@@ -184,8 +187,32 @@ export default function ToolsPage() {
             <EbayRepricingTool />
           </div>
 
-          {/* Coming-soon tools */}
+          {/* Live eBay automation features */}
           <div className="grid gap-4 sm:grid-cols-2">
+            <ToolCard
+              icon={RefreshCw}
+              title="Auto-Reprice"
+              description="SnapList checks your active eBay listings once per day and automatically adjusts prices that deviate beyond your threshold from current market value. Configure your threshold in Settings."
+              status="available"
+              action="Configure in Settings"
+              onAction={() => window.location.href = "/settings#auto-reprice"}
+            />
+            <ToolCard
+              icon={Webhook}
+              title="Sold Item Webhook"
+              description="When an item sells on eBay, SnapList receives an instant notification and automatically deducts it from your inventory. No manual tracking — your collection stays in sync."
+              status="available"
+              action="View Inventory"
+              onAction={() => window.location.href = "/inventories"}
+            />
+            <ToolCard
+              icon={Upload}
+              title="Bulk CSV Import"
+              description="Import up to 2,000 cards at once from a spreadsheet. Drag-and-drop a CSV file on the Scan page, preview your data, and add the whole batch to your collection in one click."
+              status="available"
+              action="Go to Scan"
+              onAction={() => window.location.href = "/scan"}
+            />
             <ToolCard
               icon={Tags}
               title="Offers Management"
@@ -206,13 +233,6 @@ export default function ToolsPage() {
               description="Detect duplicate listings across your eBay store and merge them into multi-quantity listings. Reduces listing fees and simplifies inventory management. Preview changes before applying."
               status="coming-soon"
               action="Find Duplicates"
-            />
-            <ToolCard
-              icon={RefreshCcw}
-              title="Inventory Sync"
-              description="Sync your scanned inventory with your eBay active listings. Automatically update quantities and end listings for sold items. Keeps your eBay store in sync with your scanned collection."
-              status="coming-soon"
-              action="Sync Inventory"
             />
           </div>
         </div>
