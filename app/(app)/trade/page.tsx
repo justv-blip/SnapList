@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   ArrowLeftRight,
   Plus,
@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import { GAME_LABELS, type Game } from "@/lib/types";
+import { UpgradeGate } from "@/components/UpgradeGate";
+import { createClient } from "@/lib/supabase/client";
 
 interface TradeCard {
   id: string;
@@ -43,6 +45,16 @@ export default function TradeAnalyzerPage() {
   const [giving, setGiving] = useState<TradeCard[]>([]);
   const [receiving, setReceiving] = useState<TradeCard[]>([]);
   const [addingSide, setAddingSide] = useState<TradeSide | null>(null);
+  const [userTier, setUserTier] = useState<string>("free");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await createClient().from("profiles").select("subscription_tier").single();
+        if (data?.subscription_tier) setUserTier(data.subscription_tier);
+      } catch { /* non-critical */ }
+    })();
+  }, []);
 
   // Dialog state
   const [query, setQuery] = useState("");
@@ -152,6 +164,13 @@ export default function TradeAnalyzerPage() {
           Compare card values on both sides of a trade to see if it&apos;s fair
         </p>
       </div>
+
+      <UpgradeGate
+        requiredTier="pro"
+        currentTier={userTier}
+        featureName="Trade Analyzer"
+        description="Search live card prices, add cards to both sides of a trade, and instantly see if the deal is fair — available on Pro and above."
+      />
 
       {/* Verdict banner */}
       <div className="card-panel flex items-center gap-4">

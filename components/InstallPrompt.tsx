@@ -85,8 +85,8 @@ export default function InstallPrompt() {
     >
       <div className="bg-panel border border-border rounded-2xl shadow-2xl p-4 flex items-start gap-3">
         {/* Icon */}
-        <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-          <Download className="w-5 h-5 text-brand" />
+        <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+          <Download className="w-5 h-5 text-accent" />
         </div>
 
         {/* Text */}

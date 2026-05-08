@@ -37,6 +37,8 @@ import {
   type QuantityConflict,
 } from "@/lib/supabaseInventoryStore";
 import type { ExportPlatform } from "@/lib/types";
+import { UpgradeGate } from "@/components/UpgradeGate";
+import { createClient } from "@/lib/supabase/client";
 
 type Platform = ExportPlatform;
 type ListingStatus = InventoryStatus;
@@ -67,6 +69,16 @@ export default function InventoriesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showEvents, setShowEvents] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [userTier, setUserTier] = useState<string>("free");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await createClient().from("profiles").select("subscription_tier").single();
+        if (data?.subscription_tier) setUserTier(data.subscription_tier);
+      } catch { /* non-critical */ }
+    })();
+  }, []);
 
   // Sync state
   const [syncing, setSyncing] = useState(false);
@@ -199,6 +211,13 @@ export default function InventoriesPage() {
           </button>
         </div>
       </div>
+
+      <UpgradeGate
+        requiredTier="business"
+        currentTier={userTier}
+        featureName="Inventory Management"
+        description="Track active listings across eBay and TCGPlayer, sync sold items automatically, and manage stock levels — available on Business and above."
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

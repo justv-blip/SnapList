@@ -413,11 +413,11 @@ function CollectionContent() {
       )}
 
       {/* Tab toggle */}
-      <div className="flex gap-2 p-1 rounded-xl bg-surface-2 border border-border w-fit">
+      <div className="flex gap-2 p-1 rounded-xl bg-panel2 border border-border w-fit">
         <button
           onClick={() => setTab("cards")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === "cards" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"
+            tab === "cards" ? "bg-accent text-white shadow-sm" : "text-muted hover:text-foreground"
           }`}
         >
           <CreditCard className="w-4 h-4" />
@@ -431,7 +431,7 @@ function CollectionContent() {
         <button
           onClick={() => setTab("sealed")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === "sealed" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"
+            tab === "sealed" ? "bg-accent text-white shadow-sm" : "text-muted hover:text-foreground"
           }`}
         >
           <Package className="w-4 h-4" />
@@ -445,7 +445,7 @@ function CollectionContent() {
         <button
           onClick={() => setTab("sets")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === "sets" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"
+            tab === "sets" ? "bg-accent text-white shadow-sm" : "text-muted hover:text-foreground"
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -459,7 +459,7 @@ function CollectionContent() {
         <button
           onClick={() => setTab("wishlist")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === "wishlist" ? "bg-brand text-white shadow-sm" : "text-muted hover:text-foreground"
+            tab === "wishlist" ? "bg-accent text-white shadow-sm" : "text-muted hover:text-foreground"
           }`}
         >
           <Heart className="w-4 h-4" />
@@ -469,9 +469,9 @@ function CollectionContent() {
 
       {/* Export bar — floats above cards when cards are selected */}
       {selectedCardIds.size > 0 && tab === "cards" && (
-        <div className="sticky top-4 z-20 flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl bg-brand/10 border border-brand/30 backdrop-blur-sm">
+        <div className="sticky top-4 z-20 flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl bg-accent/10 border border-accent/30 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <CheckSquare className="w-4 h-4 text-brand" />
+            <CheckSquare className="w-4 h-4 text-accent" />
             {selectedCardIds.size} card{selectedCardIds.size !== 1 ? "s" : ""} selected
           </div>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
@@ -486,7 +486,7 @@ function CollectionContent() {
                 key={fmt}
                 onClick={() => handleExport(fmt)}
                 disabled={isExporting}
-                className="btn text-xs flex items-center gap-1.5 border-brand/40 text-brand hover:bg-brand/10"
+                className="btn text-xs flex items-center gap-1.5 border-accent/40 text-accent hover:bg-accent/10"
               >
                 <Download className="w-3.5 h-3.5" />
                 {fmt === "csv" ? "CSV" : fmt.charAt(0).toUpperCase() + fmt.slice(1)}
@@ -892,8 +892,8 @@ function SealedItemRow({
     <div className="card-panel overflow-hidden">
       <div className="flex items-center gap-4 p-4">
         {/* Icon */}
-        <div className="w-10 h-10 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0">
-          <Package className="w-5 h-5 text-brand" />
+        <div className="w-10 h-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+          <Package className="w-5 h-5 text-accent" />
         </div>
 
         {/* Main info */}
@@ -903,7 +903,7 @@ function SealedItemRow({
               {item.product_name ?? <span className="text-muted italic">Unknown Product</span>}
             </span>
             {productTypeLabel && (
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-surface-2 border border-border text-muted">
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-panel2 border border-border text-muted">
                 {productTypeLabel}
               </span>
             )}
@@ -967,7 +967,7 @@ function SealedItemRow({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-2 transition-colors"
+            className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-panel2 transition-colors"
           >
             <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
@@ -999,11 +999,11 @@ function SealedItemRow({
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-border px-4 py-3 bg-surface-2 space-y-3 text-xs text-muted">
+        <div className="border-t border-border px-4 py-3 bg-panel2 space-y-3 text-xs text-muted">
 
           {/* Purchase price */}
           <div className="flex items-center gap-3">
-            <DollarSign className="w-3 h-3 text-brand shrink-0" />
+            <DollarSign className="w-3 h-3 text-accent shrink-0" />
             <span className="text-muted">Cost basis:</span>
             {editingPurchasePrice ? (
               <div className="flex items-center gap-2 flex-1">
@@ -1024,7 +1024,7 @@ function SealedItemRow({
                 <button onClick={savePurchasePrice} disabled={savingPrice} className="p-1 rounded text-green-400 hover:bg-green-500/10">
                   <Check className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => setEditingPurchasePrice(false)} className="p-1 rounded text-muted hover:bg-surface-2">
+                <button onClick={() => setEditingPurchasePrice(false)} className="p-1 rounded text-muted hover:bg-panel2">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -1045,7 +1045,7 @@ function SealedItemRow({
 
           {item.price_source && (
             <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-3 h-3 text-brand" />
+              <TrendingUp className="w-3 h-3 text-accent" />
               <span>Price source: {item.price_source}</span>
             </div>
           )}
@@ -1187,7 +1187,7 @@ function SetGroupCard({ group, maxCards }: { group: SetGroup; maxCards: number }
             )}
           </div>
           {/* Progress bar (relative to largest set) */}
-          <div className="mt-2 h-1.5 rounded-full bg-surface-2 overflow-hidden w-full max-w-xs">
+          <div className="mt-2 h-1.5 rounded-full bg-panel2 overflow-hidden w-full max-w-xs">
             <div
               className="h-full rounded-full bg-accent transition-all"
               style={{ width: `${fillPct}%` }}
@@ -1201,7 +1201,7 @@ function SetGroupCard({ group, maxCards }: { group: SetGroup; maxCards: number }
       {expanded && (
         <div className="border-t border-border">
           {/* Condition breakdown */}
-          <div className="flex items-center gap-3 px-4 py-2 text-xs text-muted border-b border-border bg-surface-2/50 flex-wrap">
+          <div className="flex items-center gap-3 px-4 py-2 text-xs text-muted border-b border-border bg-panel2/50 flex-wrap">
             {uniqueConditions.map((cond) => {
               const count = group.cards.filter((c) => c.condition === cond).length;
               return (
@@ -1326,7 +1326,7 @@ function DuplicateGroupCard({
             <button
               onClick={() => onExport("ebay")}
               disabled={isExporting}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium bg-brand/10 border border-brand/30 text-brand hover:bg-brand/20 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
               title={`Export ${extras.length} extra cop${extras.length !== 1 ? "ies" : "y"} to eBay`}
             >
               <Download className="w-3 h-3" />
@@ -1452,13 +1452,13 @@ function ListCard({
 }) {
   const photoUrl = card.photos?.[0]?.dataUrl || card.imageUrl;
   return (
-    <div className={`card-panel flex items-center gap-4 py-3 transition-colors ${selected ? "border-brand/50 bg-brand/5" : "hover:border-accent/30"}`}>
+    <div className={`card-panel flex items-center gap-4 py-3 transition-colors ${selected ? "border-accent/50 bg-accent/5" : "hover:border-accent/30"}`}>
       {/* Checkbox */}
       <button
         onClick={onToggleSelect}
-        className="shrink-0 text-muted hover:text-brand transition-colors p-1"
+        className="shrink-0 text-muted hover:text-accent transition-colors p-1"
       >
-        {selected ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
+        {selected ? <CheckSquare className="w-4 h-4 text-accent" /> : <Square className="w-4 h-4" />}
       </button>
 
       {/* Card link */}

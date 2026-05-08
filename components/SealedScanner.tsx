@@ -163,8 +163,8 @@ export default function SealedScanner() {
           onClick={() => { setInputMode("upload"); reset(); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
             inputMode === "upload"
-              ? "bg-brand text-white border-brand"
-              : "bg-surface-2 text-muted border-border hover:border-brand/50"
+              ? "bg-accent text-white border-accent"
+              : "bg-panel2 text-muted border-border hover:border-accent/50"
           }`}
         >
           <Upload className="w-4 h-4" />
@@ -174,8 +174,8 @@ export default function SealedScanner() {
           onClick={() => { setInputMode("camera"); reset(); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
             inputMode === "camera"
-              ? "bg-brand text-white border-brand"
-              : "bg-surface-2 text-muted border-border hover:border-brand/50"
+              ? "bg-accent text-white border-accent"
+              : "bg-panel2 text-muted border-border hover:border-accent/50"
           }`}
         >
           <Camera className="w-4 h-4" />
@@ -191,11 +191,11 @@ export default function SealedScanner() {
             onDrop={onDrop}
             onDragOver={onDragOver}
             onClick={() => fileInputRef.current?.click()}
-            className="relative border-2 border-dashed border-border hover:border-brand/60 rounded-xl bg-surface-2 transition-colors cursor-pointer"
+            className="relative border-2 border-dashed border-border hover:border-accent/60 rounded-xl bg-panel2 transition-colors cursor-pointer"
           >
             <div className="flex flex-col items-center gap-3 py-14 px-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center">
-                <Upload className="w-6 h-6 text-brand" />
+              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+                <Upload className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">Drop image here or click to browse</p>
@@ -213,11 +213,11 @@ export default function SealedScanner() {
         ) : (
           <div
             onClick={() => cameraInputRef.current?.click()}
-            className="relative border-2 border-dashed border-border hover:border-brand/60 rounded-xl bg-surface-2 transition-colors cursor-pointer"
+            className="relative border-2 border-dashed border-border hover:border-accent/60 rounded-xl bg-panel2 transition-colors cursor-pointer"
           >
             <div className="flex flex-col items-center gap-3 py-14 px-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center">
-                <Camera className="w-6 h-6 text-brand" />
+              <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+                <Camera className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">Tap to open camera</p>
@@ -235,7 +235,7 @@ export default function SealedScanner() {
           </div>
         )
       ) : (
-        <div className="relative rounded-xl overflow-hidden border border-border bg-surface-2">
+        <div className="relative rounded-xl overflow-hidden border border-border bg-panel2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
@@ -264,7 +264,7 @@ export default function SealedScanner() {
       {selectedFile && !scanning && !result && (
         <button
           onClick={runScan}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand/90 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition-colors"
         >
           <ScanLine className="w-4 h-4" />
           Identify Sealed Product
@@ -272,7 +272,7 @@ export default function SealedScanner() {
       )}
 
       {scanning && (
-        <div className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-brand/10 border border-brand/20 text-brand text-sm font-medium">
+        <div className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-sm font-medium">
           <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -294,7 +294,7 @@ export default function SealedScanner() {
           />
           <button
             onClick={() => { setResult(null); }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border bg-surface-2 text-sm text-muted hover:text-foreground hover:border-brand/50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border bg-panel2 text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Scan Again
@@ -304,23 +304,23 @@ export default function SealedScanner() {
 
       {/* Tips */}
       {!selectedFile && !result && (
-        <div className="rounded-lg bg-surface-2 border border-border p-4">
+        <div className="rounded-lg bg-panel2 border border-border p-4">
           <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Tips for best results</p>
           <ul className="space-y-1.5 text-xs text-muted">
             <li className="flex items-start gap-1.5">
-              <span className="text-brand mt-0.5">•</span>
+              <span className="text-accent mt-0.5">•</span>
               Lay the product flat with the front face clearly visible
             </li>
             <li className="flex items-start gap-1.5">
-              <span className="text-brand mt-0.5">•</span>
+              <span className="text-accent mt-0.5">•</span>
               Make sure the product name and set logo are in frame
             </li>
             <li className="flex items-start gap-1.5">
-              <span className="text-brand mt-0.5">•</span>
+              <span className="text-accent mt-0.5">•</span>
               Good lighting — avoid harsh shadows across the text
             </li>
             <li className="flex items-start gap-1.5">
-              <span className="text-brand mt-0.5">•</span>
+              <span className="text-accent mt-0.5">•</span>
               For edition detection, include any "1st Edition" stamps in the shot
             </li>
           </ul>

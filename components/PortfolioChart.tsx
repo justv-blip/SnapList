@@ -86,7 +86,7 @@ export function PortfolioChart({ snapshots, currentValue, cardCount, sealedCount
                   ? "text-green-400 bg-green-500/10 border-green-500/20"
                   : isDown
                   ? "text-red-400 bg-red-500/10 border-red-500/20"
-                  : "text-muted bg-surface-2 border-border"
+                  : "text-muted bg-panel2 border-border"
               }`}>
                 {isUp ? <TrendingUp className="w-3 h-3" /> : isDown ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                 {changePct >= 0 ? "+" : ""}{changePct.toFixed(1)}%

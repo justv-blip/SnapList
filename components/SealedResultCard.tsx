@@ -50,7 +50,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 
 function ProductTypeBadge({ type }: { type: string }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-2 text-muted border border-border">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-panel2 text-muted border border-border">
       <Package className="w-3 h-3" />
       {SEALED_PRODUCT_LABELS[type as keyof typeof SEALED_PRODUCT_LABELS] ?? type}
     </span>
@@ -78,7 +78,7 @@ export default function SealedResultCard({
   return (
     <div className="rounded-xl border border-border bg-surface overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-surface-2 flex items-center justify-between gap-3">
+      <div className="px-4 py-3 border-b border-border bg-panel2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-foreground">
             {hasResult ? "Product Identified" : "Unable to Identify"}
@@ -150,10 +150,10 @@ export default function SealedResultCard({
         </div>
 
         {/* Market price */}
-        <div className="rounded-lg bg-surface-2 border border-border p-3">
+        <div className="rounded-lg bg-panel2 border border-border p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-brand" />
+              <TrendingUp className="w-4 h-4 text-accent" />
               <span className="text-sm font-medium text-foreground">Market Price</span>
             </div>
             {marketPriceUsd != null ? (
@@ -184,8 +184,8 @@ export default function SealedResultCard({
                 onClick={() => handleConditionChange(c)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                   currentCondition === c
-                    ? "bg-brand text-white border-brand"
-                    : "bg-surface-2 text-muted border-border hover:border-brand/50 hover:text-foreground"
+                    ? "bg-accent text-white border-accent"
+                    : "bg-panel2 text-muted border-border hover:border-accent/50 hover:text-foreground"
                 }`}
               >
                 {SEALED_CONDITION_LABELS[c]}
@@ -209,7 +209,7 @@ export default function SealedResultCard({
               {showReasoning ? "Hide" : "Show"} AI reasoning
             </button>
             {showReasoning && (
-              <p className="mt-2 text-xs text-muted bg-surface-2 rounded-lg p-3 border border-border leading-relaxed">
+              <p className="mt-2 text-xs text-muted bg-panel2 rounded-lg p-3 border border-border leading-relaxed">
                 {guess.reasoning}
               </p>
             )}
@@ -221,7 +221,7 @@ export default function SealedResultCard({
           <button
             onClick={() => onSave({ ...result, condition: currentCondition })}
             disabled={saving || !hasResult}
-            className="w-full py-2.5 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? "Saving…" : "Add to Collection"}
           </button>

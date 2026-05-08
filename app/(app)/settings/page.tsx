@@ -21,6 +21,7 @@ import {
   Sun,
   Moon,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [scanCount, setScanCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [decisionRules, setDecisionRules] = useState<DecisionRules>({ ...DEFAULT_DECISION_RULES });
   const [rulesSaved, setRulesSaved] = useState(false);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig>({ ...DEFAULT_PRICING_CONFIG });
@@ -680,6 +682,20 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* ── Advanced settings toggle ── */}
+      <button
+        onClick={() => setShowAdvanced((v) => !v)}
+        className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors self-start"
+      >
+        <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+        {showAdvanced ? "Hide" : "Show"} advanced settings
+        <span className="text-[10px] text-muted bg-panel2 border border-border px-1.5 py-0.5 rounded-full">
+          Decision Engine &amp; Pricing
+        </span>
+      </button>
+
+      {showAdvanced && (
+      <>
       {/* ── Decision Rules ── */}
       <div className="card-panel">
         <div className="flex items-center justify-between mb-5">
@@ -954,6 +970,8 @@ export default function SettingsPage() {
           Reset to Defaults
         </button>
       </div>
+      </> /* end showAdvanced */
+      )}
 
     </div>
   );

@@ -21,6 +21,8 @@ import {
   RefreshCw,
   Webhook,
   Upload,
+  Bell,
+  Loader2,
 } from "lucide-react";
 import { MarketAnalysisPanel } from "@/components/MarketAnalysis";
 import { EbayRepricingTool } from "@/components/EbayRepricingTool";
@@ -43,8 +45,30 @@ function ToolCard({
   onAction?: () => void;
 }) {
   const isComingSoon = status === "coming-soon";
+  const [notified, setNotified] = useState(false);
+  const [notifying, setNotifying] = useState(false);
+
+  const handleNotify = async () => {
+    setNotifying(true);
+    try {
+      await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: "feature",
+          email: "",          // anonymous — no email required for interest signal
+          subject: `Feature interest: ${title}`,
+          message: `User expressed interest in the roadmap feature: ${title}`,
+        }),
+      });
+    } catch { /* fire-and-forget */ } finally {
+      setNotified(true);
+      setNotifying(false);
+    }
+  };
+
   return (
-    <div className="card-panel flex flex-col gap-3">
+    <div className={`card-panel flex flex-col gap-3 ${isComingSoon ? "opacity-80" : ""}`}>
       <div className="flex items-start gap-3">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -58,7 +82,7 @@ function ToolCard({
           />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className={`font-semibold text-sm ${isComingSoon ? "text-muted" : ""}`}>{title}</h3>
             {status === "connected" && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 border border-green-500/30 text-green-400">
@@ -68,7 +92,7 @@ function ToolCard({
             )}
             {isComingSoon && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-panel2 border border-border text-muted">
-                On Roadmap
+                Roadmap
               </span>
             )}
           </div>
@@ -77,7 +101,26 @@ function ToolCard({
           </p>
         </div>
       </div>
-      {!isComingSoon && (
+
+      {isComingSoon ? (
+        <button
+          className={`self-start mt-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+            notified
+              ? "border-accent2/30 text-accent2 bg-accent2/10 cursor-default"
+              : "border-border text-muted hover:text-foreground hover:border-accent/40 hover:bg-accent/5"
+          }`}
+          onClick={notified ? undefined : handleNotify}
+          disabled={notifying}
+        >
+          {notified ? (
+            <><CheckCircle2 className="w-3.5 h-3.5" /> Noted — we&apos;ll let you know</>
+          ) : notifying ? (
+            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+          ) : (
+            <><Bell className="w-3.5 h-3.5" /> Notify me when ready</>
+          )}
+        </button>
+      ) : (
         <button
           className="btn self-start mt-auto flex items-center gap-1.5"
           onClick={onAction}

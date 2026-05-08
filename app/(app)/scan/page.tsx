@@ -45,7 +45,7 @@ function ScanContent() {
 
       {/* Mode toggle — hidden when reviewing a specific batch */}
       {!batchId && (
-        <div className="flex gap-2 p-1 rounded-xl bg-surface-2 border border-border w-fit flex-wrap">
+        <div className="flex gap-2 p-1 rounded-xl bg-panel2 border border-border w-fit flex-wrap">
           <button
             onClick={() => setMode("cards")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
