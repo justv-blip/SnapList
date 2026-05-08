@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" data-theme="dark" data-accent="green" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var m=localStorage.getItem('tcg-theme-mode');var a=localStorage.getItem('tcg-theme-accent');if(m)document.documentElement.setAttribute('data-theme',m);if(a)document.documentElement.setAttribute('data-accent',a);}catch(e){}})()` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var m=localStorage.getItem('tcg-theme-mode');var a=localStorage.getItem('tcg-theme-accent');var v=localStorage.getItem('tcg-theme-v');if(!v&&a==='blue'){a='green';localStorage.setItem('tcg-theme-accent','green');}if(!v){localStorage.setItem('tcg-theme-v','2');}if(m)document.documentElement.setAttribute('data-theme',m);if(a)document.documentElement.setAttribute('data-accent',a);}catch(e){}})()` }} />
       </head>
       <body className="min-h-screen">
         <Providers>{children}</Providers>
