@@ -11,7 +11,7 @@ import {
   Layers,
 } from "lucide-react";
 
-export type CameraMode = "listing" | "identify";
+export type CameraMode = "listing" | "identify" | "bulk";
 
 interface Props {
   onCapture: (files: File[]) => void;

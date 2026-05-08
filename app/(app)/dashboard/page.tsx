@@ -19,6 +19,9 @@ import {
   Zap,
   Award,
   Target,
+  Receipt,
+  CalendarDays,
+  CalendarRange,
 } from "lucide-react";
 import {
   getAllBatches,
@@ -29,6 +32,10 @@ import {
   type BatchSummary,
   type BatchStatus,
 } from "@/lib/supabaseStore";
+import {
+  getInventorySnapshot,
+  type InventorySnapshot,
+} from "@/lib/supabaseInventoryStore";
 import { GAME_LABELS, type Game, type ScannedCard } from "@/lib/types";
 import { evaluateCard, DEFAULT_DECISION_RULES, type Recommendation } from "@/lib/decisionEngine";
 import { useToast } from "@/components/Toast";
@@ -208,11 +215,48 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
 // Page
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Revenue helpers
+// ---------------------------------------------------------------------------
+
+interface RevenueData {
+  allTime: number;
+  thisMonth: number;
+  thisWeek: number;
+  soldCount: number;
+}
+
+function computeRevenue(snapshot: InventorySnapshot): RevenueData {
+  const now = Date.now();
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const weekStart = now - 7 * 86_400_000;
+
+  const soldListings = snapshot.items.flatMap((item) =>
+    item.listings.filter((l) => l.status === "sold")
+  );
+
+  const allTime = soldListings.reduce((s, l) => s + l.listPrice * l.quantity, 0);
+  const thisMonth = soldListings
+    .filter((l) => l.soldAt != null && l.soldAt >= monthStart)
+    .reduce((s, l) => s + l.listPrice * l.quantity, 0);
+  const thisWeek = soldListings
+    .filter((l) => l.soldAt != null && l.soldAt >= weekStart)
+    .reduce((s, l) => s + l.listPrice * l.quantity, 0);
+  const soldCount = soldListings.reduce((s, l) => s + l.quantity, 0);
+
+  return { allTime, thisMonth, thisWeek, soldCount };
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default function DashboardPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [usageData, setUsageData] = useState<ScanUsageProps | null>(null);
   const [wishlistCount, setWishlistCount] = useState<number | null>(null);
+  const [inventorySnapshot, setInventorySnapshot] = useState<InventorySnapshot | null>(null);
   const { toast } = useToast();
 
   const refresh = async () => {
@@ -276,16 +320,28 @@ export default function DashboardPage() {
     } catch { /* non-critical */ }
   };
 
+  const loadInventory = async () => {
+    try {
+      const snapshot = await getInventorySnapshot();
+      setInventorySnapshot(snapshot);
+    } catch { /* non-critical */ }
+  };
+
   useEffect(() => {
     refresh();
     loadUsage();
     loadWishlist();
+    loadInventory();
     const onFocus = () => { refresh(); };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   const metrics = useMemo(() => computeMetrics(batches), [batches]);
+  const revenueData = useMemo(
+    () => (inventorySnapshot ? computeRevenue(inventorySnapshot) : null),
+    [inventorySnapshot]
+  );
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this batch? This can't be undone.")) return;
@@ -346,7 +402,7 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Metrics always visible */}
-          <MetricsView metrics={metrics} batches={batches} wishlistCount={wishlistCount} />
+          <MetricsView metrics={metrics} batches={batches} wishlistCount={wishlistCount} revenueData={revenueData} />
 
           {/* Batch list — shown below metrics when there are batches */}
           {batches.length > 0 && (
@@ -377,7 +433,7 @@ export default function DashboardPage() {
 // Metrics View
 // ---------------------------------------------------------------------------
 
-function MetricsView({ metrics, batches, wishlistCount }: { metrics: BusinessMetrics; batches: Batch[]; wishlistCount: number | null }) {
+function MetricsView({ metrics, batches, wishlistCount, revenueData }: { metrics: BusinessMetrics; batches: Batch[]; wishlistCount: number | null; revenueData: RevenueData | null }) {
   if (metrics.totalCards === 0) {
     return (
       <div className="card-panel flex flex-col items-center justify-center py-16 text-center">
@@ -430,6 +486,39 @@ function MetricsView({ metrics, batches, wishlistCount }: { metrics: BusinessMet
           href="/collection?tab=wishlist"
         />
       </div>
+
+      {/* Revenue Panel */}
+      {revenueData && (revenueData.allTime > 0 || revenueData.soldCount > 0) && (
+        <div className="card-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <Receipt className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-sm">Revenue</h3>
+            {revenueData.soldCount > 0 && (
+              <span className="ml-auto text-xs text-muted">{revenueData.soldCount} sale{revenueData.soldCount !== 1 ? "s" : ""} total</span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-xs text-muted uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                <CalendarDays className="w-3 h-3" /> This Week
+              </div>
+              <div className="text-xl font-bold">${revenueData.thisWeek.toFixed(2)}</div>
+            </div>
+            <div className="text-center border-x border-border px-4">
+              <div className="text-xs text-muted uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                <CalendarRange className="w-3 h-3" /> This Month
+              </div>
+              <div className="text-2xl font-bold text-accent">${revenueData.thisMonth.toFixed(2)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-muted uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                <TrendingUp className="w-3 h-3" /> All Time
+              </div>
+              <div className="text-xl font-bold">${revenueData.allTime.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Activity + Pipeline row */}
       <div className="grid md:grid-cols-2 gap-4">

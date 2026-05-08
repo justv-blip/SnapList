@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuid } from "uuid";
-import { Upload, Camera, Save, Check, AlertTriangle, Copy, Scan, Layers, Loader2 } from "lucide-react";
+import { Upload, Camera, Save, Check, AlertTriangle, Copy, Scan, Layers, Loader2, Zap, X } from "lucide-react";
 import type {
   BatchConfig,
   CardPhoto,
@@ -78,6 +78,9 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [verifyIndex, setVerifyIndex] = useState<number | null>(null);
   const duplicateCount = useMemo(() => detectDuplicates(cards).length, [cards]);
+  // Bulk mode: photos staged before processing
+  const [bulkStagedFiles, setBulkStagedFiles] = useState<File[]>([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Check eBay connection status
   useEffect(() => {
@@ -332,6 +335,9 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
         captureQueueRef.current.push(files);
         setQueueCount(captureQueueRef.current.length);
         drainQueue();
+      } else if (cameraMode === "bulk") {
+        // Bulk mode: stage all captured photos — don't process until user taps "Process"
+        setBulkStagedFiles((prev) => [...prev, ...files]);
       } else {
         // Identify mode — process immediately (same API, same card list)
         handleFiles(files);
@@ -339,6 +345,18 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
     },
     [cameraMode, handleFiles, drainQueue]
   );
+
+  const handleBulkProcess = useCallback(async () => {
+    if (bulkStagedFiles.length === 0) return;
+    setBulkProcessing(true);
+    const toProcess = [...bulkStagedFiles];
+    setBulkStagedFiles([]);
+    try {
+      await handleFiles(toProcess);
+    } finally {
+      setBulkProcessing(false);
+    }
+  }, [bulkStagedFiles, handleFiles]);
 
   const updateCard = useCallback((id: string, patch: Partial<ScannedCard>) => {
     setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -498,11 +516,24 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
                 <Scan className="w-3.5 h-3.5" />
                 Identify
               </button>
+              <button
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  cameraMode === "bulk"
+                    ? "bg-accent/15 border border-accent/40 text-accent shadow-sm"
+                    : "text-muted hover:text-white"
+                }`}
+                onClick={() => { setCameraMode("bulk"); setBulkStagedFiles([]); }}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Bulk
+              </button>
             </div>
             <p className="text-xs text-muted">
               {cameraMode === "listing"
                 ? "Tap shutter after each card — camera stays live, shots queue in background."
-                : "Hold a card steady — auto-captures when detected. Great for quick pricing."}
+                : cameraMode === "identify"
+                ? "Hold a card steady — auto-captures when detected. Great for quick pricing."
+                : "Shoot all your cards rapidly — process them all at once when done."}
             </p>
             {/* Queue count badge */}
             {cameraMode === "listing" && (queueCount > 0 || scanning) && (
@@ -582,6 +613,61 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
           </p>
         )}
       </section>
+
+      {/* Bulk staging strip — shown in bulk mode when photos are staged */}
+      {cameraMode === "bulk" && inputMode === "camera" && (
+        <section className={`rounded-2xl border px-5 py-4 flex items-center gap-4 ${
+          bulkStagedFiles.length > 0
+            ? "bg-accent/[0.06] border-accent/30"
+            : "bg-panel2 border-border"
+        }`}>
+          <div className="flex-1">
+            {bulkStagedFiles.length === 0 ? (
+              <p className="text-sm text-muted">
+                Tap the shutter for each card. When you&apos;re done, tap <strong className="text-foreground">Process All</strong> to identify them in one shot.
+              </p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center shrink-0">
+                  <span className="text-accent font-bold text-lg">{bulkStagedFiles.length}</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">
+                    {bulkStagedFiles.length} photo{bulkStagedFiles.length !== 1 ? "s" : ""} staged
+                  </p>
+                  <p className="text-xs text-muted">
+                    Keep shooting or process now — all cards identified in one request
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {bulkStagedFiles.length > 0 && (
+              <button
+                className="btn text-xs"
+                onClick={() => setBulkStagedFiles([])}
+                disabled={bulkProcessing}
+                title="Clear staged photos"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            )}
+            <button
+              className="btn-primary text-sm"
+              onClick={handleBulkProcess}
+              disabled={bulkStagedFiles.length === 0 || bulkProcessing}
+            >
+              {bulkProcessing ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Identifying…</>
+              ) : (
+                <><Zap className="w-4 h-4" /> Process All{bulkStagedFiles.length > 0 ? ` (${bulkStagedFiles.length})` : ""}</>
+              )}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4 flex-wrap">
