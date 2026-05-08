@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuid } from "uuid";
-import { Upload, Camera, Save, Check, AlertTriangle, Copy, Scan, Layers, Loader2, Zap, X } from "lucide-react";
+import { Upload, Camera, Check, AlertTriangle, Copy, Scan, Layers, Loader2, Zap, X } from "lucide-react";
 import type {
   BatchConfig,
   CardPhoto,

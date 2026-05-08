@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ScanLine,
   Package,
-  Clock,
   CheckCircle2,
   ArrowRight,
   ImageIcon,
@@ -25,11 +24,9 @@ import {
 } from "lucide-react";
 import {
   getAllBatches,
-  getBatchSummary,
   deleteBatch,
   updateBatchStatus,
   type Batch,
-  type BatchSummary,
   type BatchStatus,
 } from "@/lib/supabaseStore";
 import {
