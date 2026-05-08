@@ -96,8 +96,8 @@ const PRICING: {
 ];
 
 const EXTRA_TIERS = [
-  { name: "Empire",   price: "$299", yearlyPrice: "$269.10", limit: "50,000 scans/mo" },
-  { name: "Monopoly", price: "$599", yearlyPrice: "$539.10", limit: "Unlimited" },
+  { name: "Team",   price: "$299", yearlyPrice: "$269.10", limit: "50,000 scans/mo", description: "For multi-seller operations and card shops" },
+  { name: "Agency", price: "$599", yearlyPrice: "$539.10", limit: "Unlimited scans",  description: "White-label ready for large-scale operations" },
 ];
 
 const FEATURE_COMPARISON = [
@@ -169,7 +169,7 @@ export function PricingSection() {
         <span className={`text-sm font-medium ${yearly ? "text-foreground" : "text-muted"}`}>
           Yearly
           <span className="ml-1.5 text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">
-            Save 10%
+            Save up to $178/yr
           </span>
         </span>
       </div>
@@ -179,79 +179,110 @@ export function PricingSection() {
       )}
 
       {/* Tier cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {PRICING.map((plan) => (
-          <div
-            key={plan.name}
-            className={`card-panel flex flex-col ${
-              plan.highlight
-                ? "border-accent/40 bg-accent/[0.03] ring-1 ring-accent/20"
-                : ""
-            }`}
-          >
-            {plan.highlight && (
-              <div className="text-[10px] font-semibold text-accent uppercase tracking-widest mb-3">
-                Most Popular
-              </div>
-            )}
-            <h3 className="font-semibold text-lg">{plan.name}</h3>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-3xl font-bold">
-                {yearly ? plan.yearlyPrice : plan.price}
-              </span>
-              <span className="text-sm text-muted">{plan.period}</span>
-            </div>
-            {yearly && (
-              <p className="text-[10px] text-accent mt-0.5">
-                Billed ${(parseFloat(plan.yearlyPrice.replace("$", "")) * 12).toFixed(2)}/year
-              </p>
-            )}
-            <p className="text-xs text-muted mt-1">{plan.limit}</p>
-            <p className="text-xs text-muted mt-1 mb-5">{plan.description}</p>
-            <ul className="space-y-2.5 flex-1">
-              {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm">
-                  <Check className="w-4 h-4 text-accent2 shrink-0 mt-0.5" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => handleCheckout(plan.tier)}
-              disabled={loading !== null}
-              className={`mt-6 w-full justify-center ${
-                plan.highlight ? "btn-primary" : "btn"
-              } py-2.5`}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
+        {PRICING.map((plan) => {
+          const monthlyNum  = parseFloat(plan.price.replace("$", ""));
+          const yearlyNum   = parseFloat(plan.yearlyPrice.replace("$", ""));
+          const annualSaving = Math.round((monthlyNum - yearlyNum) * 12);
+
+          return (
+            <div
+              key={plan.name}
+              className={`card-panel flex flex-col relative ${
+                plan.highlight
+                  ? "border-accent/50 bg-accent/[0.04] shadow-2xl shadow-accent/15 ring-1 ring-accent/25 lg:-translate-y-2"
+                  : ""
+              }`}
             >
-              {loading === plan.tier ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  {plan.cta}
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
+              {/* Most Popular badge */}
+              {plan.highlight && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black shadow-lg shadow-accent/30">
+                    ★ Most Popular
+                  </span>
+                </div>
               )}
-            </button>
-          </div>
-        ))}
+
+              <div className={plan.highlight ? "pt-3" : ""}>
+                <h3 className="font-semibold text-lg">{plan.name}</h3>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold">
+                    {yearly ? plan.yearlyPrice : plan.price}
+                  </span>
+                  <span className="text-sm text-muted">{plan.period}</span>
+                </div>
+                {yearly ? (
+                  <p className="text-[10px] text-accent mt-0.5 font-medium">
+                    Save ${annualSaving}/yr · billed ${(yearlyNum * 12).toFixed(2)}/yr
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted mt-0.5">
+                    or ${plan.yearlyPrice}/mo billed yearly
+                  </p>
+                )}
+                <p className="text-xs text-muted mt-1">{plan.limit}</p>
+                <p className="text-xs text-muted mt-1 mb-5">{plan.description}</p>
+              </div>
+
+              <ul className="space-y-2.5 flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm">
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.highlight ? "text-accent" : "text-accent2"}`} />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => handleCheckout(plan.tier)}
+                disabled={loading !== null}
+                className={`mt-6 w-full justify-center py-2.5 ${
+                  plan.highlight ? "btn-primary shadow-lg shadow-accent/20" : "btn"
+                }`}
+              >
+                {loading === plan.tier ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    {plan.cta}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Extra tiers */}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-        {EXTRA_TIERS.map((tier) => (
-          <div key={tier.name} className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-panel border border-border">
-            <div>
-              <span className="font-semibold text-sm">{tier.name}</span>
-              <span className="text-xs text-muted ml-2">{tier.limit}</span>
+      {/* Volume tiers */}
+      <div className="mt-8 rounded-2xl border border-border bg-panel/50 p-6">
+        <div className="text-center mb-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-1">Volume Plans</p>
+          <p className="text-sm text-muted">For high-volume operations and card shops — contact us for a custom quote.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {EXTRA_TIERS.map((tier) => (
+            <div key={tier.name} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-panel2 border border-border">
+              <div>
+                <p className="font-semibold">{tier.name}</p>
+                <p className="text-xs text-muted mt-0.5">{tier.description}</p>
+                <p className="text-xs text-accent mt-1">{tier.limit}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-2xl font-bold">
+                  {yearly ? tier.yearlyPrice : tier.price}
+                  <span className="text-xs text-muted font-normal">/mo</span>
+                </p>
+                {yearly && (
+                  <p className="text-[10px] text-accent">billed yearly</p>
+                )}
+              </div>
             </div>
-            <span className="text-lg font-bold">
-              {yearly ? tier.yearlyPrice : tier.price}
-              <span className="text-xs text-muted font-normal">/mo</span>
-            </span>
-          </div>
-        ))}
-        <p className="w-full text-center text-xs text-muted mt-1">
-          Empire and Monopoly plans — contact us for a custom quote.
+          ))}
+        </div>
+        <p className="text-center text-xs text-muted mt-4">
+          Need something custom?{" "}
+          <a href="/contact" className="text-accent hover:underline">Contact us</a> and we&apos;ll build a plan around your volume.
         </p>
       </div>
 
