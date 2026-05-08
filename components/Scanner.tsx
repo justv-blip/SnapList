@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuid } from "uuid";
-import { Upload, Camera, Save, Check, AlertTriangle, Copy } from "lucide-react";
+import { Upload, Camera, Save, Check, AlertTriangle, Copy, Scan, Layers, Loader2 } from "lucide-react";
 import type {
   BatchConfig,
   CardPhoto,
@@ -20,7 +20,7 @@ import { saveBatch, getBatch, type Batch, type BatchStatus } from "@/lib/supabas
 import { getActiveProfile } from "@/lib/supabaseProfileStore";
 import BatchSetup from "./BatchSetup";
 import UploadDropzone from "./UploadDropzone";
-import CameraScanner from "./CameraScanner";
+import CameraScanner, { type CameraMode } from "./CameraScanner";
 import CardList from "./CardList";
 import ExportBar, { type EbayBulkResult } from "./ExportBar";
 import ListingEditor from "./ListingEditor";
@@ -33,6 +33,9 @@ import { logger } from "@/lib/logger";
 
 type InputMode = "upload" | "camera";
 type ScannerPhase = "setup" | "scanning";
+
+// How many consecutive capture batches we buffer while one is processing
+const MAX_QUEUE_DEPTH = 20;
 
 // Read an image File as a data URL for thumbnail rendering.
 function fileToDataUrl(file: File): Promise<string> {
@@ -60,6 +63,11 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [defaultGame, setDefaultGame] = useState<Game>("pokemon");
   const [inputMode, setInputMode] = useState<InputMode>("upload");
+  const [cameraMode, setCameraMode] = useState<CameraMode>("listing");
+  // Queue for listing-mode camera: captures fire immediately, process sequentially
+  const captureQueueRef = useRef<File[][]>([]);
+  const queueProcessingRef = useRef(false);
+  const [queueCount, setQueueCount] = useState(0);
   const [templates, setTemplates] = useState<ListingTemplate[]>([...DEFAULT_TEMPLATES]);
   const [currentBatchId, setCurrentBatchId] = useState<string>(batchId || "");
   const [batchName, setBatchName] = useState("");
@@ -303,6 +311,35 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
     [defaultGame, activeProfile, batchConfig]
   );
 
+  // ── Queue-based processing for listing-mode camera captures ──────────────
+  // The camera stays fully live; shots drain sequentially in the background.
+  const drainQueue = useCallback(async () => {
+    if (queueProcessingRef.current) return;
+    queueProcessingRef.current = true;
+    while (captureQueueRef.current.length > 0) {
+      const files = captureQueueRef.current.shift()!;
+      setQueueCount(captureQueueRef.current.length);
+      await handleFiles(files);
+    }
+    queueProcessingRef.current = false;
+    setQueueCount(0);
+  }, [handleFiles]);
+
+  const handleCameraCapture = useCallback(
+    (files: File[]) => {
+      if (cameraMode === "listing") {
+        if (captureQueueRef.current.length >= MAX_QUEUE_DEPTH) return; // safety cap
+        captureQueueRef.current.push(files);
+        setQueueCount(captureQueueRef.current.length);
+        drainQueue();
+      } else {
+        // Identify mode — process immediately (same API, same card list)
+        handleFiles(files);
+      }
+    },
+    [cameraMode, handleFiles, drainQueue]
+  );
+
   const updateCard = useCallback((id: string, patch: Partial<ScannedCard>) => {
     setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }, []);
@@ -409,8 +446,8 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
           </div>
         )}
 
-        {/* Mode toggle tabs */}
-        <div className="flex items-center gap-1 mb-5 p-1 bg-panel2 rounded-lg w-fit">
+        {/* Input mode tabs */}
+        <div className="flex items-center gap-1 mb-4 p-1 bg-panel2 rounded-lg w-fit">
           <button
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               inputMode === "upload"
@@ -435,12 +472,60 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
           </button>
         </div>
 
+        {/* Camera sub-mode toggle — only shown when camera is selected */}
+        {inputMode === "camera" && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-5">
+            <div className="flex items-center gap-1 p-0.5 bg-panel2/60 rounded-lg w-fit border border-border/50">
+              <button
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  cameraMode === "listing"
+                    ? "bg-panel border border-border text-white shadow-sm"
+                    : "text-muted hover:text-white"
+                }`}
+                onClick={() => setCameraMode("listing")}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Listing
+              </button>
+              <button
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  cameraMode === "identify"
+                    ? "bg-panel border border-border text-white shadow-sm"
+                    : "text-muted hover:text-white"
+                }`}
+                onClick={() => setCameraMode("identify")}
+              >
+                <Scan className="w-3.5 h-3.5" />
+                Identify
+              </button>
+            </div>
+            <p className="text-xs text-muted">
+              {cameraMode === "listing"
+                ? "Tap shutter after each card — camera stays live, shots queue in background."
+                : "Hold a card steady — auto-captures when detected. Great for quick pricing."}
+            </p>
+            {/* Queue count badge */}
+            {cameraMode === "listing" && (queueCount > 0 || scanning) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-medium">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {queueCount > 0 ? `${queueCount + (scanning ? 1 : 0)} in queue` : "Processing…"}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
             {inputMode === "upload" ? (
               <UploadDropzone onFiles={handleFiles} busy={scanning} scanCount={scanCount} />
             ) : (
-              <CameraScanner onCapture={handleFiles} busy={scanning} />
+              <CameraScanner
+                onCapture={handleCameraCapture}
+                // Listing mode: camera is never blocked — shots queue silently.
+                // Identify mode: show busy overlay between auto-captures.
+                busy={cameraMode === "identify" ? scanning : false}
+                mode={cameraMode}
+              />
             )}
           </div>
           <aside className="lg:w-80 flex flex-col gap-3">
