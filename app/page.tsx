@@ -22,6 +22,9 @@ import {
   ScanLine,
   Cpu,
   Globe,
+  MessageCircle,
+  Twitter,
+  Instagram,
 } from "lucide-react";
 import { PricingSection } from "@/components/PricingSection";
 
@@ -196,9 +199,20 @@ export default function Home() {
         </div>
 
         <div className="max-w-6xl mx-auto px-5 pt-24 pb-28 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/25 text-accent text-sm font-medium mb-8">
-            <Zap className="w-3.5 h-3.5" />
-            AI-powered card scanning and listing
+          {/* Speed pills */}
+          <div className="flex items-center justify-center gap-3 flex-wrap mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/25 text-accent text-sm font-medium">
+              <Zap className="w-3.5 h-3.5" />
+              3 sec per card
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-panel2 border border-border text-muted text-sm">
+              <Timer className="w-3.5 h-3.5" />
+              100 cards in ~15 min
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-panel2 border border-border text-muted text-sm">
+              <Check className="w-3.5 h-3.5 text-accent2" />
+              No credit card required
+            </div>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] max-w-4xl mx-auto">
             Scan your cards.
@@ -206,9 +220,9 @@ export default function Home() {
             <span className="text-accent">List them everywhere.</span>
           </h1>
           <p className="mt-7 text-lg sm:text-xl text-muted max-w-2xl mx-auto leading-relaxed">
-            Point your camera at any trading card. Get an instant ID with set,
-            collector number, and market price. Export ready-to-list files for eBay,
-            TCGPlayer, and more — in seconds, not hours.
+            Point your camera at any trading card. AI identifies the name, set, collector
+            number, and market price in seconds — then exports ready-to-list files for
+            eBay, TCGPlayer, Whatnot, Shopify, and more.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4 flex-wrap">
             <Link href="/login" className="btn-primary text-base px-8 py-3.5 shadow-lg shadow-accent/20">
@@ -218,22 +232,6 @@ export default function Home() {
             <a href="#how-it-works" className="btn text-base px-8 py-3.5">
               See How It Works
             </a>
-          </div>
-
-          {/* Trust indicators */}
-          <div className="mt-10 flex items-center justify-center gap-6 sm:gap-8 text-sm text-muted flex-wrap">
-            <span className="flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-accent2" />
-              No credit card required
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-accent2" />
-              25 free scans
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-accent2" />
-              Works on mobile
-            </span>
           </div>
 
           {/* ── Product UI Mockup ── */}
@@ -384,32 +382,38 @@ export default function Home() {
 
       {/* Speed comparison */}
       <section className="max-w-6xl mx-auto px-5 py-20">
-        <div className="card-panel max-w-3xl mx-auto overflow-hidden">
-          <h2 className="text-xl font-bold text-center mb-2">Stop listing cards the slow way</h2>
-          <p className="text-sm text-muted text-center mb-8">
-            See how SnapList compares to manual listing
-          </p>
-          <div className="overflow-x-auto">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/25 text-accent text-xs font-medium mb-4">
+              <Clock className="w-3 h-3" />
+              Time saved per session
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">3 hours of work. Done in 15 minutes.</h2>
+            <p className="text-sm text-muted max-w-lg mx-auto">
+              Every minute you spend typing card names manually is a minute you could be listing more cards. Here&apos;s what changes with SnapList.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border overflow-hidden shadow-xl shadow-black/20">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-xs text-muted uppercase tracking-wider font-medium">Task</th>
-                  <th className="text-center py-3 px-4 text-xs text-muted uppercase tracking-wider font-medium">Manual</th>
-                  <th className="text-center py-3 px-4 text-xs text-accent uppercase tracking-wider font-medium">SnapList</th>
+                <tr className="bg-panel2 border-b border-border">
+                  <th className="text-left py-3.5 px-5 text-xs text-muted uppercase tracking-wider font-medium">Task</th>
+                  <th className="text-center py-3.5 px-5 text-xs text-muted uppercase tracking-wider font-medium">Manual</th>
+                  <th className="text-center py-3.5 px-5 text-xs text-accent uppercase tracking-wider font-medium">SnapList</th>
                 </tr>
               </thead>
-              <tbody>
-                {COMPARISON.map((row) => (
-                  <tr key={row.task} className="border-b border-border/50 last:border-0">
-                    <td className="py-3 px-4 text-muted">{row.task}</td>
-                    <td className="py-3 px-4 text-center">
+              <tbody className="bg-panel">
+                {COMPARISON.map((row, i) => (
+                  <tr key={row.task} className={`border-b border-border/50 last:border-0 ${i === COMPARISON.length - 1 ? "bg-accent/[0.03]" : ""}`}>
+                    <td className={`py-3.5 px-5 ${i === COMPARISON.length - 1 ? "font-semibold text-foreground" : "text-muted"}`}>{row.task}</td>
+                    <td className="py-3.5 px-5 text-center">
                       <span className="inline-flex items-center gap-1.5 text-muted/70">
-                        <Clock className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5 text-red-400/60" />
                         {row.manual}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center gap-1.5 text-accent2 font-medium">
+                    <td className="py-3.5 px-5 text-center">
+                      <span className={`inline-flex items-center gap-1.5 font-medium ${i === COMPARISON.length - 1 ? "text-accent text-base" : "text-accent2"}`}>
                         <Zap className="w-3.5 h-3.5" />
                         {row.scanner}
                       </span>
@@ -419,6 +423,9 @@ export default function Home() {
               </tbody>
             </table>
           </div>
+          <p className="text-center text-xs text-muted mt-4">
+            Based on a 100-card batch. Results vary by condition and game.
+          </p>
         </div>
       </section>
 
@@ -578,47 +585,106 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="max-w-6xl mx-auto px-5 py-20 text-center">
-        <div className="relative overflow-hidden card-panel max-w-2xl mx-auto py-16 border-accent/20">
-          <div className="absolute inset-0 -z-10 bg-accent/[0.03]" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[300px] bg-accent/[0.08] rounded-full blur-[80px] -z-10" />
-          <ScanLine className="w-10 h-10 text-accent mx-auto mb-5" />
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Ready to list faster?</h2>
-          <p className="text-muted mb-8 max-w-md mx-auto leading-relaxed">
-            Stop typing card names one by one. Scan your stack, review, and
-            export — all in one place. Start with 25 free scans.
+      <section className="max-w-6xl mx-auto px-5 py-24 text-center">
+        <div className="relative overflow-hidden rounded-3xl border border-accent/20 bg-gradient-to-b from-accent/[0.07] to-transparent px-8 py-20 max-w-3xl mx-auto">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/[0.10] rounded-full blur-[100px] -z-10" />
+          <div className="absolute inset-0 rounded-3xl bg-panel/60 -z-10" />
+          <ScanLine className="w-12 h-12 text-accent mx-auto mb-6 opacity-80" />
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight">
+            Your card stack is waiting.<br />
+            <span className="text-accent">Start listing in minutes.</span>
+          </h2>
+          <p className="text-muted mb-10 max-w-lg mx-auto leading-relaxed text-base sm:text-lg">
+            25 free scans every month, forever. No credit card, no expiry.
+            Scan one card or a thousand — SnapList handles both.
           </p>
-          <Link href="/login" className="btn-primary text-base px-8 py-3.5 shadow-lg shadow-accent/20">
-            Start Scanning Free
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-          <p className="text-xs text-muted mt-4">
-            No credit card required
-          </p>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Link href="/login" className="btn-primary text-base px-10 py-4 shadow-xl shadow-accent/25 rounded-xl">
+              Start Scanning Free
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <a href="#pricing" className="btn text-base px-8 py-4 rounded-xl">
+              View Pricing
+            </a>
+          </div>
+          <div className="mt-8 flex items-center justify-center gap-6 text-sm text-muted flex-wrap">
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-accent2" /> No credit card</span>
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-accent2" /> 25 free scans/month</span>
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-accent2" /> Cancel anytime</span>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-border">
-        <div className="max-w-6xl mx-auto px-5 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2 text-sm">
-              <Sparkles className="w-4 h-4 text-accent" />
-              <span className="font-medium">SnapList</span>
-              <span className="text-xs text-muted ml-2">&copy; {new Date().getFullYear()}</span>
+      <footer className="mt-auto border-t border-border/60 bg-panel/30">
+        <div className="max-w-6xl mx-auto px-5 py-14">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+            {/* Brand column */}
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-accent" />
+                </div>
+                <span className="font-semibold">SnapList</span>
+              </div>
+              <p className="text-xs text-muted leading-relaxed max-w-[180px]">
+                AI-powered card scanning and listing for TCG sellers. Scan, identify, export.
+              </p>
+              {/* Social links */}
+              <div className="flex items-center gap-3 mt-5">
+                <Link href="/socials" className="w-8 h-8 rounded-lg bg-panel2 border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent/30 transition-colors" title="Discord">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                </Link>
+                <Link href="/socials" className="w-8 h-8 rounded-lg bg-panel2 border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent/30 transition-colors" title="Twitter / X">
+                  <Twitter className="w-3.5 h-3.5" />
+                </Link>
+                <Link href="/socials" className="w-8 h-8 rounded-lg bg-panel2 border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent/30 transition-colors" title="Instagram">
+                  <Instagram className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
-            <div className="flex items-center gap-5 text-xs text-muted">
-              <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-              <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-              <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
-              <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
-              <Link href="/socials" className="hover:text-foreground transition-colors">Socials</Link>
+
+            {/* Product */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-4">Product</h4>
+              <ul className="space-y-2.5 text-sm text-muted">
+                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a></li>
+                <li><Link href="/login" className="hover:text-foreground transition-colors">Dashboard</Link></li>
+              </ul>
             </div>
-            <div className="flex items-center gap-4 text-xs text-muted">
-              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="/acceptable-use" className="hover:text-foreground transition-colors">Acceptable Use</Link>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-4">Company</h4>
+              <ul className="space-y-2.5 text-sm text-muted">
+                <li><a href="#reviews" className="hover:text-foreground transition-colors">Reviews</a></li>
+                <li><a href="#faq" className="hover:text-foreground transition-colors">FAQ</a></li>
+                <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
+                <li><Link href="/socials" className="hover:text-foreground transition-colors">Socials</Link></li>
+              </ul>
             </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-4">Legal</h4>
+              <ul className="space-y-2.5 text-sm text-muted">
+                <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/acceptable-use" className="hover:text-foreground transition-colors">Acceptable Use</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-border/50 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-muted">
+              &copy; {new Date().getFullYear()} SnapList. All rights reserved.
+            </p>
+            <p className="text-xs text-muted">
+              Built for TCG sellers who move fast.
+            </p>
           </div>
         </div>
       </footer>
