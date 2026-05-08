@@ -7,6 +7,9 @@ import {
   ImageIcon,
   ExternalLink,
   Loader2,
+  Download,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   LineChart,
@@ -202,6 +205,12 @@ export default function CardDetailModal({ card, onClose }: Props) {
               </a>
             )}
 
+            {/* Quick Export */}
+            <div>
+              <p className="text-xs text-muted uppercase tracking-wider mb-3">Quick Export</p>
+              <QuickExportButtons card={card} />
+            </div>
+
             {/* Price History section */}
             <div>
               <p className="text-xs text-muted uppercase tracking-wider mb-3">Price History</p>
@@ -276,6 +285,94 @@ export default function CardDetailModal({ card, onClose }: Props) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function QuickExportButtons({ card }: { card: ScannedCard & { batchName?: string; batchId?: string } }) {
+  const [copied, setCopied] = useState(false);
+  const [exportingFmt, setExportingFmt] = useState<string | null>(null);
+
+  const listingTitle = [card.name, card.condition, card.setName]
+    .filter(Boolean)
+    .join(" - ");
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(listingTitle);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard not available
+    }
+  };
+
+  const handleExport = async (format: "ebay" | "tcgplayer" | "whatnot") => {
+    setExportingFmt(format);
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cards: [card], format }),
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const cd = res.headers.get("content-disposition") ?? "";
+      const filename = cd.match(/filename="?([^"]+)"?/)?.[1] ?? `${format}-export.csv`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail — toast not available in this component
+    } finally {
+      setExportingFmt(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {/* Copy listing title */}
+      <button
+        onClick={handleCopy}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-panel2 border border-border hover:border-accent/40 transition-colors"
+      >
+        {copied ? (
+          <><Check className="w-3.5 h-3.5 text-accent2" /> Copied!</>
+        ) : (
+          <><Copy className="w-3.5 h-3.5 text-muted" /> Copy Title</>
+        )}
+      </button>
+
+      {/* Export to eBay */}
+      <button
+        onClick={() => handleExport("ebay")}
+        disabled={exportingFmt !== null}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-panel2 border border-border hover:border-accent/40 transition-colors disabled:opacity-50"
+      >
+        {exportingFmt === "ebay" ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-muted" />
+        ) : (
+          <Download className="w-3.5 h-3.5 text-muted" />
+        )}
+        eBay CSV
+      </button>
+
+      {/* Export to TCGplayer */}
+      <button
+        onClick={() => handleExport("tcgplayer")}
+        disabled={exportingFmt !== null}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-panel2 border border-border hover:border-accent/40 transition-colors disabled:opacity-50"
+      >
+        {exportingFmt === "tcgplayer" ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-muted" />
+        ) : (
+          <Download className="w-3.5 h-3.5 text-muted" />
+        )}
+        TCGplayer CSV
+      </button>
     </div>
   );
 }

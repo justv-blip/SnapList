@@ -21,6 +21,7 @@ import {
   Receipt,
   CalendarDays,
   CalendarRange,
+  ChevronDown,
 } from "lucide-react";
 import {
   getAllBatches,
@@ -40,6 +41,8 @@ import { BatchSkeleton, StatsSkeleton } from "@/components/Skeleton";
 import { ScanUsageCard, type ScanUsageProps } from "@/components/ScanUsageCard";
 import { createClient } from "@/lib/supabase/client";
 import { TIER_LIMITS } from "@/lib/tierLimits";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
+import PriceMoverWidget from "@/components/PriceMoverWidget";
 
 // ---------------------------------------------------------------------------
 // Business metrics computed from batch data
@@ -72,10 +75,16 @@ interface BusinessMetrics {
   // New
   gradedCards: number;
   gradedValue: number;
+  recCardMap: Record<string, Array<{ name: string; value: number; condition: string; batchId: string; batchName: string }>>;
 }
 
+type CardWithBatchRef = ScannedCard & { batchId: string; batchName: string };
+
 function computeMetrics(batches: Batch[]): BusinessMetrics {
-  const allCards: ScannedCard[] = batches.flatMap((b) => b.cards);
+  const allCardsFull: CardWithBatchRef[] = batches.flatMap((b) =>
+    b.cards.map((c) => ({ ...c, batchId: b.id, batchName: b.name }))
+  );
+  const allCards: CardWithBatchRef[] = allCardsFull;
   const now = Date.now();
   const dayMs = 86_400_000;
   const todayStart = now - (now % dayMs);
@@ -96,6 +105,8 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
   let scannedToday = 0;
   let scannedThisWeek = 0;
   let scannedThisMonth = 0;
+
+  const recCardMap: Record<string, Array<{ name: string; value: number; condition: string; batchId: string; batchName: string }>> = {};
 
   // Load decision rules from localStorage (same as CardRow)
   let rules = DEFAULT_DECISION_RULES;
@@ -132,6 +143,11 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
     // Recommendation breakdown
     const decision = evaluateCard(card, rules);
     recMap.set(decision.recommendation, (recMap.get(decision.recommendation) || 0) + 1);
+
+    // Accumulate top cards per rec (up to 3, sorted by value — we collect all then trim)
+    const recEntry = recCardMap[decision.recommendation] ?? [];
+    recEntry.push({ name: card.name, value: val, condition: card.condition, batchId: card.batchId, batchName: card.batchName });
+    recCardMap[decision.recommendation] = recEntry;
 
     // Activity timeline
     if (card.createdAt >= todayStart) scannedToday++;
@@ -181,6 +197,13 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
       listed: !!c.ebayListingId,
     }));
 
+  // Trim recCardMap to top 3 cards per recommendation by value desc
+  for (const key of Object.keys(recCardMap)) {
+    recCardMap[key] = recCardMap[key]
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3);
+  }
+
   const profitPotential = totalInventoryValue - totalListedValue;
   const avgCardValue = allCards.length > 0 ? totalInventoryValue / allCards.length : 0;
 
@@ -205,6 +228,7 @@ function computeMetrics(batches: Batch[]): BusinessMetrics {
     scannedThisMonth,
     gradedCards,
     gradedValue,
+    recCardMap,
   };
 }
 
@@ -390,6 +414,49 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* Onboarding checklist — shown to new users until all steps done */}
+      {!loading && <OnboardingChecklist metrics={metrics} />}
+
+      {/* Pipeline CTA banner — shown when there are pending batches */}
+      {!loading && metrics.pendingBatches > 0 && (() => {
+        const pendingValue = batches
+          .filter((b) => b.status === "pending")
+          .reduce(
+            (s, b) =>
+              s +
+              b.cards.reduce((cs, c) => cs + (c.marketPriceUsd ?? 0) * (c.quantity || 1), 0),
+            0
+          );
+        const topBatch = [...batches]
+          .filter((b) => b.status === "pending")
+          .sort(
+            (a, b) =>
+              b.cards.reduce((s, c) => s + (c.marketPriceUsd ?? 0) * (c.quantity || 1), 0) -
+              a.cards.reduce((s, c) => s + (c.marketPriceUsd ?? 0) * (c.quantity || 1), 0)
+          )[0];
+        const ctaHref = topBatch ? `/scan?batch=${topBatch.id}` : "/scan";
+        return (
+          <div className="bg-yellow-500/8 border border-yellow-500/25 rounded-xl p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center shrink-0">
+              <ListChecks className="w-5 h-5 text-yellow-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <strong className="text-yellow-300">
+                {metrics.pendingBatches} batch{metrics.pendingBatches !== 1 ? "es" : ""} pending review
+              </strong>
+              <div className="mt-0.5">
+                <span className="text-xs text-muted">
+                  ${pendingValue.toFixed(2)} in unreviewed cards
+                </span>
+              </div>
+            </div>
+            <Link href={ctaHref} className="btn-primary shrink-0">
+              Review Now →
+            </Link>
+          </div>
+        );
+      })()}
+
       {loading ? (
         <div className="space-y-3">
           <StatsSkeleton />
@@ -484,6 +551,27 @@ function MetricsView({ metrics, batches, wishlistCount, revenueData }: { metrics
         />
       </div>
 
+      {/* Marketplace status strip */}
+      {(metrics.listedOnEbay > 0 || metrics.unlistedCards > 0) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-panel2 border border-border text-xs text-muted flex-wrap">
+          <ShoppingBag className="w-3.5 h-3.5 text-accent shrink-0" />
+          <span>
+            <strong className="text-foreground">{metrics.listedOnEbay}</strong> listed on eBay
+            {metrics.totalListedValue > 0 && (
+              <span className="ml-1 text-accent2">(${metrics.totalListedValue.toFixed(2)})</span>
+            )}
+          </span>
+          <span className="text-border">·</span>
+          <span>
+            <strong className="text-foreground">{metrics.unlistedCards}</strong> unlisted cards worth{" "}
+            <strong className="text-foreground">${metrics.profitPotential.toFixed(2)}</strong>
+          </span>
+          <Link href="/collection" className="ml-auto text-accent hover:underline flex items-center gap-1">
+            View collection <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
+
       {/* Revenue Panel */}
       {revenueData && (revenueData.allTime > 0 || revenueData.soldCount > 0) && (
         <div className="card-panel">
@@ -516,6 +604,9 @@ function MetricsView({ metrics, batches, wishlistCount, revenueData }: { metrics
           </div>
         </div>
       )}
+
+      {/* Price Movers — only renders when there's price history data */}
+      <PriceMoverWidget />
 
       {/* Activity + Pipeline row */}
       <div className="grid md:grid-cols-2 gap-4">
@@ -557,8 +648,8 @@ function MetricsView({ metrics, batches, wishlistCount, revenueData }: { metrics
         </div>
       </div>
 
-      {/* Breakdowns row */}
-      <div className="grid md:grid-cols-3 gap-4">
+      {/* Breakdowns row — 2-col grid for Game + Condition */}
+      <div className="grid md:grid-cols-2 gap-4">
         {/* Game Breakdown */}
         {metrics.gameBreakdown.length > 0 && (
           <div className="card-panel">
@@ -591,31 +682,23 @@ function MetricsView({ metrics, batches, wishlistCount, revenueData }: { metrics
             </div>
           </div>
         )}
-
-        {/* AI Recommendations Breakdown */}
-        {metrics.recommendationBreakdown.length > 0 && (
-          <div className="card-panel">
-            <h3 className="font-semibold text-sm mb-3">AI Recommendations</h3>
-            <div className="space-y-2">
-              {metrics.recommendationBreakdown.map((r) => {
-                const colors: Record<string, string> = {
-                  SELL_FAST: "text-emerald-400",
-                  SELL_MAX: "text-blue-400",
-                  GRADE: "text-purple-400",
-                  HOLD: "text-yellow-400",
-                  BULK_LOT: "text-gray-400",
-                };
-                return (
-                  <div key={r.rec} className="flex items-center justify-between text-sm">
-                    <span className={colors[r.rec] || "text-muted"}>{r.label}</span>
-                    <span className="font-medium">{r.count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* AI Recommendations hero — full width */}
+      {metrics.recommendationBreakdown.length > 0 && (
+        <div className="card-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-sm">AI Recommendations</h3>
+            <span className="ml-auto text-xs text-muted">{metrics.totalCards} cards analyzed</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {metrics.recommendationBreakdown.map((r) => (
+              <AIRecCard key={r.rec} rec={r} cards={metrics.recCardMap[r.rec] ?? []} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Top Cards */}
       {metrics.topCards.length > 0 && (
@@ -864,5 +947,79 @@ function StatusBadge({ status }: { status: BatchStatus }) {
     >
       {labels[status]}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AIRecCard sub-component
+// ---------------------------------------------------------------------------
+
+function AIRecCard({
+  rec,
+  cards,
+}: {
+  rec: { rec: string; count: number; label: string };
+  cards: Array<{ name: string; value: number; condition: string; batchId: string; batchName: string }>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const colors: Record<string, { text: string; bg: string; border: string }> = {
+    SELL_FAST: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/25" },
+    SELL_MAX:  { text: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/25"    },
+    GRADE:     { text: "text-purple-400",  bg: "bg-purple-500/10",  border: "border-purple-500/25"  },
+    HOLD:      { text: "text-yellow-400",  bg: "bg-yellow-500/10",  border: "border-yellow-500/25"  },
+    BULK_LOT:  { text: "text-gray-400",    bg: "bg-gray-500/10",    border: "border-gray-500/25"    },
+  };
+  const descriptions: Record<string, string> = {
+    SELL_FAST: "Price to move quickly",
+    SELL_MAX:  "List at or above market",
+    GRADE:     "Grade for higher ROI",
+    HOLD:      "Price may rise, sit on it",
+    BULK_LOT:  "Bundle for a lot sale",
+  };
+
+  const c = colors[rec.rec] ?? colors.BULK_LOT;
+  const desc = descriptions[rec.rec] ?? "";
+
+  return (
+    <div className={`rounded-xl border p-3 ${c.bg} ${c.border}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className={`font-semibold text-sm ${c.text}`}>{rec.label}</p>
+          <p className="text-[11px] text-muted mt-0.5">{desc}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-2xl font-bold ${c.text}`}>{rec.count}</span>
+          {cards.length > 0 && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="p-1 rounded text-muted hover:text-foreground transition-colors"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </button>
+          )}
+        </div>
+      </div>
+      {expanded && cards.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+          {cards.map((card, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate text-foreground">{card.name}</p>
+                <p className="text-[10px] text-muted">{card.condition}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {card.value > 0 && (
+                  <span className={`text-xs font-semibold ${c.text}`}>${card.value.toFixed(2)}</span>
+                )}
+                <Link href={`/scan?batch=${card.batchId}`} className="text-muted/50 hover:text-muted transition-colors">
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
