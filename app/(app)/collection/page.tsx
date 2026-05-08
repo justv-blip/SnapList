@@ -44,6 +44,7 @@ import { BatchSkeleton } from "@/components/Skeleton";
 import { detectDuplicates, type DuplicateGroup } from "@/lib/duplicates";
 import { PortfolioChart, type PortfolioSnapshot } from "@/components/PortfolioChart";
 import WishlistTab from "@/components/WishlistTab";
+import CardDetailModal from "@/components/CardDetailModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,9 @@ function CollectionContent() {
   // Portfolio chart
   const [snapshots, setSnapshots] = useState<PortfolioSnapshot[]>([]);
   const snapshotRecorded = useRef(false);
+
+  // Card detail modal
+  const [selectedCard, setSelectedCard] = useState<(ScannedCard & { batchName?: string }) | null>(null);
 
   // Export multi-select (cards tab list view)
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
@@ -652,7 +656,7 @@ function CollectionContent() {
           ) : view === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {sorted.map((card) => (
-                <GridCard key={`${card.batchId}-${card.id}`} card={card} />
+                <GridCard key={`${card.batchId}-${card.id}`} card={card} onSelect={setSelectedCard} />
               ))}
             </div>
           ) : (
@@ -663,6 +667,7 @@ function CollectionContent() {
                   card={card}
                   selected={selectedCardIds.has(card.id)}
                   onToggleSelect={() => toggleCardSelect(card.id)}
+                  onSelect={setSelectedCard}
                 />
               ))}
             </div>
@@ -700,6 +705,11 @@ function CollectionContent() {
       {/* ── WISHLIST TAB ──────────────────────────────────────────── */}
       {tab === "wishlist" && (
         <WishlistTab />
+      )}
+
+      {/* ── CARD DETAIL MODAL ─────────────────────────────────────── */}
+      {selectedCard && (
+        <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
       )}
     </div>
   );
@@ -1391,10 +1401,19 @@ function DuplicateGroupCard({
 
 // ── Grid card ──────────────────────────────────────────────────────────────────
 
-function GridCard({ card }: { card: CardWithBatch }) {
+function GridCard({
+  card,
+  onSelect,
+}: {
+  card: CardWithBatch;
+  onSelect: (card: CardWithBatch) => void;
+}) {
   const photoUrl = card.photos?.[0]?.dataUrl || card.imageUrl;
   return (
-    <Link href={`/scan?batch=${card.batchId}`} className="card-panel p-0 overflow-hidden hover:border-accent/30 transition-colors group">
+    <div
+      className="card-panel p-0 overflow-hidden hover:border-accent/40 transition-colors group cursor-pointer"
+      onClick={() => onSelect({ ...card })}
+    >
       <div className="aspect-[2.5/3.5] bg-panel2 relative overflow-hidden">
         {photoUrl ? (
           <img src={photoUrl} alt={card.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -1435,7 +1454,7 @@ function GridCard({ card }: { card: CardWithBatch }) {
           {card.quantity > 1 && <span className="chip text-[9px]">×{card.quantity}</span>}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -1445,24 +1464,29 @@ function ListCard({
   card,
   selected,
   onToggleSelect,
+  onSelect,
 }: {
   card: CardWithBatch;
   selected: boolean;
   onToggleSelect: () => void;
+  onSelect: (card: CardWithBatch) => void;
 }) {
   const photoUrl = card.photos?.[0]?.dataUrl || card.imageUrl;
   return (
-    <div className={`card-panel flex items-center gap-4 py-3 transition-colors ${selected ? "border-accent/50 bg-accent/5" : "hover:border-accent/30"}`}>
+    <div
+      className={`card-panel flex items-center gap-4 py-3 transition-colors cursor-pointer ${selected ? "border-accent/50 bg-accent/5" : "hover:border-accent/40"}`}
+      onClick={() => onSelect({ ...card })}
+    >
       {/* Checkbox */}
       <button
-        onClick={onToggleSelect}
+        onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
         className="shrink-0 text-muted hover:text-accent transition-colors p-1"
       >
         {selected ? <CheckSquare className="w-4 h-4 text-accent" /> : <Square className="w-4 h-4" />}
       </button>
 
-      {/* Card link */}
-      <Link href={`/scan?batch=${card.batchId}`} className="flex items-center gap-4 flex-1 min-w-0">
+      {/* Card content */}
+      <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className="w-12 h-16 rounded-lg bg-panel2 border border-border overflow-hidden shrink-0">
           {photoUrl ? (
             <img src={photoUrl} alt={card.name} className="w-full h-full object-cover" />
@@ -1497,7 +1521,7 @@ function ListCard({
             <span className="text-muted/50">{card.batchName}</span>
           </div>
         </div>
-      </Link>
+      </div>
 
       <div className="text-right shrink-0">
         {card.marketPriceUsd != null && card.marketPriceUsd > 0 ? (

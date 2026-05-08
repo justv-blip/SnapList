@@ -314,6 +314,9 @@ function WishlistRow({
                 Alert ≤${item.alert_price_usd!.toFixed(0)}
               </span>
             )}
+            {item.alert_sent_at && (
+              <span className="text-xs text-accent2">✓ Alert sent {new Date(item.alert_sent_at).toLocaleDateString()}</span>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             {item.max_price_usd != null && (
