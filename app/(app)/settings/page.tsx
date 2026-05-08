@@ -329,6 +329,9 @@ export default function SettingsPage() {
         <p className="text-sm text-muted mt-1">Account, plan, and preferences</p>
       </div>
 
+      {/* ── Appearance (top — fast personalization) ── */}
+      <AppearanceSection />
+
       {/* ── Account ── */}
       <div className="card-panel">
         <div className="flex items-center gap-2 mb-5">
@@ -410,9 +413,9 @@ export default function SettingsPage() {
               value={upgradeTier}
               onChange={(e) => setUpgradeTier(e.target.value)}
             >
-              <option value="starter">Lister — $12/mo (300 scans)</option>
-              <option value="pro">Pro — $29/mo (1,500 scans)</option>
-              <option value="business">Business — $59/mo (6,000 scans)</option>
+              <option value="starter">Lister — $12/mo (500 scans)</option>
+              <option value="pro">Pro — $29/mo (2,000 scans)</option>
+              <option value="business">Business — $59/mo (8,000 scans)</option>
             </select>
             <p className="text-[10px] text-muted">
               You&apos;ll be taken to a secure Stripe checkout page.
@@ -952,8 +955,6 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* ── Appearance ── */}
-      <AppearanceSection />
     </div>
   );
 }

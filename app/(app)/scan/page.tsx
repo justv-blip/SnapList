@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { CreditCard, Package, Award, Upload } from "lucide-react";
 import Scanner from "@/components/Scanner";
 import SealedScanner from "@/components/SealedScanner";
@@ -23,6 +24,15 @@ function ScanContent() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
+          {batchId && (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground mb-2 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              Back to Dashboard
+            </Link>
+          )}
           <h1 className="text-2xl font-bold tracking-tight">
             {batchId ? "Review Batch" : "Scan"}
           </h1>

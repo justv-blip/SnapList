@@ -427,7 +427,7 @@ function MetricsView({ metrics, batches, wishlistCount }: { metrics: BusinessMet
           icon={Target}
           sub={wishlistCount === 0 ? "Nothing on wishlist" : wishlistCount === 1 ? "1 card to find" : `${wishlistCount} cards to find`}
           accent={!!wishlistCount && wishlistCount > 0}
-          href="/collection"
+          href="/collection?tab=wishlist"
         />
       </div>
 

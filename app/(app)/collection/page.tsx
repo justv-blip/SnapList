@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Library,
@@ -86,7 +87,17 @@ interface SetGroup {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function CollectionPage() {
-  const [tab, setTab] = useState<CollectionTab>("cards");
+  return (
+    <Suspense>
+      <CollectionContent />
+    </Suspense>
+  );
+}
+
+function CollectionContent() {
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as CollectionTab | null) ?? "cards";
+  const [tab, setTab] = useState<CollectionTab>(initialTab);
 
   // Cards state
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -364,7 +375,7 @@ export default function CollectionPage() {
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catalog</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Collection</h1>
           <p className="text-sm text-muted mt-1">Your full inventory</p>
         </div>
         <BatchSkeleton />
@@ -378,7 +389,7 @@ export default function CollectionPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catalog</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Collection</h1>
           <p className="text-sm text-muted mt-1">
             {totalCardQty} card{totalCardQty !== 1 ? "s" : ""}
             {sealedItems.length > 0 && ` · ${sealedItems.length} sealed`}
@@ -1397,6 +1408,10 @@ function GridCard({ card }: { card: CardWithBatch }) {
             ${card.marketPriceUsd.toFixed(2)}
           </span>
         )}
+        {/* Condition chip — bottom right */}
+        <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] font-medium text-white/70 backdrop-blur-sm truncate max-w-[80px]">
+          {card.condition}
+        </span>
         <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
           {card.foil && (
             <span className="px-1.5 py-0.5 rounded-md bg-black/70 text-[10px] font-medium text-yellow-400 backdrop-blur-sm">Foil</span>

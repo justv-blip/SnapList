@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Wrench,
@@ -92,6 +92,14 @@ function ToolCard({
 
 export default function ToolsPage() {
   const [activeTab, setActiveTab] = useState<ToolTab>("ebay");
+  const [ebayConnected, setEbayConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/ebay/status")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => setEbayConnected(d?.connected ?? false))
+      .catch(() => setEbayConnected(false));
+  }, []);
 
   const tabs: { key: ToolTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { key: "ebay", label: "eBay Tools", icon: Package },
@@ -126,21 +134,35 @@ export default function ToolsPage() {
         ))}
       </div>
 
-      {/* eBay connection banner */}
-      {activeTab === "ebay" && (
+      {/* eBay connection banner — only shown when not connected */}
+      {activeTab === "ebay" && ebayConnected === false && (
         <div className="card-panel bg-accent/5 border-accent/20">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-accent shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium">eBay seller account required</p>
+              <p className="text-sm font-medium">Connect your eBay account to get started</p>
               <p className="text-xs text-muted mt-1">
-                Connect your eBay account once in Settings to enable direct listing.
+                Connect your eBay seller account once in Settings to enable direct listing.
                 Once connected, you can push cards straight from the scanner — no CSV upload needed.
               </p>
               <Link href="/settings" className="btn mt-3 inline-flex items-center gap-2 text-xs">
                 <Settings className="w-3.5 h-3.5" />
-                Go to Settings to connect eBay
+                Connect eBay in Settings
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* eBay connected banner */}
+      {activeTab === "ebay" && ebayConnected === true && (
+        <div className="card-panel bg-green-500/5 border-green-500/20">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-green-400">eBay account connected</p>
+              <p className="text-xs text-muted mt-0.5">
+                Your listings will sync directly — no CSV exports needed.
+              </p>
             </div>
           </div>
         </div>
