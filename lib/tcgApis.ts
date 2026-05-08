@@ -14,7 +14,7 @@
 //
 //   3. Mock catalog as a last-resort fallback for unknown TCGs.
 
-import type { Game, ScannedCard } from "./types";
+import type { Game, ScannedCard, VariantPrice, CardFinish } from "./types";
 
 type LookupHit = Partial<ScannedCard> & { name: string; game: Game };
 
@@ -263,11 +263,18 @@ async function lookupScryfall(input: LookupInput): Promise<LookupHit | null> {
 }
 
 function scryfallToHit(card: any): LookupHit {
-  const usd = card?.prices?.usd ? Number(card.prices.usd) : undefined;
+  const prices = card?.prices || {};
   const image =
     card?.image_uris?.normal ||
     card?.image_uris?.large ||
     card?.card_faces?.[0]?.image_uris?.normal;
+
+  const variants: VariantPrice[] = [];
+  if (prices.usd != null) variants.push({ finish: "non-holo", label: "Normal", marketPrice: Number(prices.usd) });
+  if (prices.usd_foil != null) variants.push({ finish: "holo", label: "Foil", marketPrice: Number(prices.usd_foil) });
+  if (prices.usd_etched != null) variants.push({ finish: "etched", label: "Etched Foil", marketPrice: Number(prices.usd_etched) });
+
+  const usd = prices.usd ? Number(prices.usd) : undefined;
   return {
     name: card.name,
     game: "mtg",
@@ -277,7 +284,8 @@ function scryfallToHit(card: any): LookupHit {
     rarity: card.rarity,
     imageUrl: image,
     marketPriceUsd: usd,
-    externalUrl: card.scryfall_uri
+    externalUrl: card.scryfall_uri,
+    variants: variants.length > 0 ? variants : undefined,
   };
 }
 
@@ -338,8 +346,31 @@ function extractPokemonPrice(card: any): number | undefined {
   return cm?.averageSellPrice ?? cm?.avg1 ?? cm?.avg7 ?? cm?.avg30 ?? undefined;
 }
 
+const POKEMON_VARIANT_MAP: Record<string, { finish: CardFinish; label: string }> = {
+  normal:               { finish: "non-holo",     label: "Normal" },
+  reverseHolofoil:      { finish: "reverse-holo", label: "Rev. Holo" },
+  holofoil:             { finish: "holo",          label: "Holofoil" },
+  "1stEditionNormal":   { finish: "non-holo",     label: "1st Ed. Normal" },
+  "1stEditionHolofoil": { finish: "holo",          label: "1st Ed. Holo" },
+};
+
 function pokemonToHit(card: any): LookupHit {
   const price = extractPokemonPrice(card);
+  const priceGroups = card?.tcgplayer?.prices || {};
+  const variants: VariantPrice[] = [];
+  for (const [key, group] of Object.entries(priceGroups)) {
+    const mapping = POKEMON_VARIANT_MAP[key];
+    const g = group as any;
+    if (mapping && g) {
+      variants.push({
+        finish: mapping.finish,
+        label: mapping.label,
+        marketPrice: g.market ?? undefined,
+        lowPrice: g.low ?? undefined,
+        midPrice: g.mid ?? undefined,
+      });
+    }
+  }
   return {
     name: card.name,
     game: "pokemon",
@@ -349,7 +380,8 @@ function pokemonToHit(card: any): LookupHit {
     rarity: card.rarity,
     imageUrl: card?.images?.large || card?.images?.small,
     marketPriceUsd: typeof price === "number" ? price : undefined,
-    externalUrl: card?.tcgplayer?.url
+    externalUrl: card?.tcgplayer?.url,
+    variants: variants.length > 0 ? variants : undefined,
   };
 }
 

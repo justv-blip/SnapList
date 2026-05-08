@@ -114,6 +114,11 @@ export default function CardVerification({
       identificationConfidence: 100,
     };
 
+    // Persist all variants so the card row can show the condition price table
+    if (match.variants && match.variants.length > 0) {
+      patch.variants = match.variants;
+    }
+
     // Apply variant pricing if a finish was selected
     if (selectedFinish && match.variants.length > 0) {
       const variant = match.variants.find((v) => v.finish === selectedFinish);

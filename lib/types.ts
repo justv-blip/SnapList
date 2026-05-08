@@ -191,6 +191,7 @@ export interface ScannedCard {
   uploadedImageDataUrl?: string; // The first photo the user uploaded (legacy, kept for compat)
   photos: CardPhoto[]; // All user photos: front, back, extras
   marketPriceUsd?: number;
+  variants?: VariantPrice[];   // Per-finish market prices (Normal, Rev.Holo, Foil, etc.)
   condition: Condition;
   quantity: number;
   foil: boolean;
@@ -226,6 +227,24 @@ export const CARD_TYPE_LABELS: Record<CardType, string> = {
   sealed: "Sealed Product",
   lot: "Lot / Bulk",
   accessory: "Accessory",
+};
+
+// Variant pricing (one entry per finish: Normal, Reverse Holo, Foil, etc.)
+export interface VariantPrice {
+  finish: CardFinish;
+  label: string;        // human-readable: "Normal", "Reverse Holo", "Foil"
+  marketPrice?: number; // NM market price for this finish
+  lowPrice?: number;
+  midPrice?: number;
+}
+
+// Condition price multipliers relative to NM market price (TCGPlayer conventions)
+export const CONDITION_MULTIPLIERS: Record<string, number> = {
+  "Near Mint":         1.00,
+  "Lightly Played":    0.80,
+  "Moderately Played": 0.60,
+  "Heavily Played":    0.40,
+  "Damaged":           0.20,
 };
 
 // Card finish / foil type

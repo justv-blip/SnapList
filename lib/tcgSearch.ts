@@ -7,17 +7,10 @@
 // Each result includes variant pricing (Normal, Reverse Holo, Holofoil, etc.)
 // pulled from the game-specific API responses.
 
-import type { Game, CardFinish } from "./types";
+import type { Game, CardFinish, VariantPrice } from "./types";
 
-// ---- Types ----
-
-export interface VariantPrice {
-  finish: CardFinish;
-  label: string;           // human-readable: "Reverse Holo", "Normal", etc.
-  marketPrice?: number;
-  lowPrice?: number;
-  midPrice?: number;
-}
+// Re-export VariantPrice from types so callers can import from either place
+export type { VariantPrice };
 
 export interface SearchResult {
   id: string;              // API-specific unique ID (Scryfall UUID, pokemontcg ID, etc.)
