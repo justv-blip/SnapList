@@ -9,6 +9,8 @@ import {
   AlertCircle,
   Scan,
   Layers,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 export type CameraMode = "listing" | "identify" | "bulk";
@@ -68,6 +70,7 @@ export default function CameraScanner({
   const [flashFrame, setFlashFrame] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [detectState, setDetectState] = useState<DetectState>("waiting");
+  const [fullscreen, setFullscreen] = useState(false);
 
   // ── Start camera ──────────────────────────────────────────────────────────
   const startCamera = useCallback(
@@ -293,7 +296,19 @@ export default function CameraScanner({
       : "border-white/30";
 
   return (
-    <div className="relative rounded-xl overflow-hidden bg-black">
+    <div className={fullscreen
+      ? "fixed inset-0 z-[60] bg-black flex flex-col justify-end"
+      : "relative rounded-xl overflow-hidden bg-black"
+    }>
+      {/* Fullscreen toggle — mobile only */}
+      <button
+        onClick={() => setFullscreen(v => !v)}
+        className="absolute top-3 left-3 z-10 sm:hidden w-9 h-9 rounded-full bg-black/50 border border-white/20 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white transition-colors"
+        title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+      >
+        {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+      </button>
+
       {/* Hidden canvases */}
       <canvas ref={canvasRef} className="hidden" />
       <canvas ref={probeRef} className="hidden" />
@@ -304,7 +319,7 @@ export default function CameraScanner({
         autoPlay
         playsInline
         muted
-        className="w-full aspect-[3/4] sm:aspect-video object-cover"
+        className={`w-full object-cover ${fullscreen ? "flex-1" : "aspect-[3/4] sm:aspect-video"}`}
       />
 
       {/* Card guide overlay */}
@@ -413,11 +428,11 @@ export default function CameraScanner({
       )}
 
       {/* Controls */}
-      <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+      <div className="absolute bottom-0 inset-x-0 p-4 pb-8 sm:pb-4 bg-gradient-to-t from-black/80 to-transparent">
         <div className="flex items-center justify-center gap-6">
           {/* Switch camera */}
           <button
-            className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/25 transition-colors"
+            className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/25 transition-colors"
             onClick={switchCamera}
             title="Switch camera"
           >
@@ -426,7 +441,7 @@ export default function CameraScanner({
 
           {/* Shutter — always active in listing mode; manual override in identify mode */}
           <button
-            className={`w-16 h-16 rounded-full border-4 flex items-center justify-center transition-all ${
+            className={`w-20 h-20 sm:w-16 sm:h-16 rounded-full border-4 flex items-center justify-center transition-all ${
               mode === "identify"
                 ? detectState === "cooldown"
                   ? "border-white/30 opacity-40 cursor-not-allowed"
@@ -442,7 +457,7 @@ export default function CameraScanner({
             }
           >
             <div
-              className={`w-12 h-12 rounded-full ${
+              className={`w-16 h-16 sm:w-12 sm:h-12 rounded-full ${
                 mode === "identify" ? "bg-accent" : "bg-white"
               }`}
             />
@@ -450,7 +465,7 @@ export default function CameraScanner({
 
           {/* Close camera */}
           <button
-            className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/25 transition-colors"
+            className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white hover:bg-white/25 transition-colors"
             onClick={stopCamera}
             title="Close camera"
           >

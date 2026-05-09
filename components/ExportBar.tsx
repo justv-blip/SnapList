@@ -182,11 +182,11 @@ export default function ExportBar({ cards, templates, ebayConnected, onEbayListA
 
   return (
     <>
-      <div className="flex items-center gap-2 flex-wrap justify-end">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap justify-end scrollbar-none">
         {/* eBay direct listing button with validation badge */}
         {ebayConnected && unlistedCount > 0 && (
           <button
-            className="btn-primary text-xs relative"
+            className="btn-primary text-xs relative shrink-0"
             disabled={ebayBusy || disabled}
             onClick={requestEbayList}
             title={`List ${unlistedCount} card${unlistedCount !== 1 ? "s" : ""} on eBay`}
@@ -210,7 +210,7 @@ export default function ExportBar({ cards, templates, ebayConnected, onEbayListA
           </button>
         )}
         {ebayConnected && unlistedCount === 0 && cards.length > 0 && (
-          <span className="inline-flex items-center gap-1.5 text-xs text-accent2">
+          <span className="inline-flex items-center gap-1.5 text-xs text-accent2 shrink-0">
             <CheckCircle2 className="w-4 h-4" />
             All listed on eBay
           </span>
@@ -218,7 +218,7 @@ export default function ExportBar({ cards, templates, ebayConnected, onEbayListA
         {FORMATS.map(({ key, label, Icon, platform }) => (
           <button
             key={key}
-            className="btn"
+            className="btn shrink-0"
             disabled={disabled || busy !== null}
             onClick={() => requestDownload(key, platform, label)}
             title={`Download ${label}`}
@@ -232,7 +232,7 @@ export default function ExportBar({ cards, templates, ebayConnected, onEbayListA
           </button>
         ))}
         {!disabled && (
-          <span className="text-xs text-muted inline-flex items-center gap-1 ml-2">
+          <span className="text-xs text-muted inline-flex items-center gap-1 ml-2 shrink-0">
             <Download className="w-3 h-3" /> {cards.length} row{cards.length === 1 ? "" : "s"}
           </span>
         )}

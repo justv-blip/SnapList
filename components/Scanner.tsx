@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuid } from "uuid";
-import { Upload, Camera, Check, AlertTriangle, Copy, Scan, Layers, Loader2, Zap, X } from "lucide-react";
+import { Upload, Camera, Check, AlertTriangle, Copy, Scan, Layers, Loader2, Zap, X, SlidersHorizontal } from "lucide-react";
 import type {
   BatchConfig,
   CardPhoto,
@@ -81,6 +81,7 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
   // Bulk mode: photos staged before processing
   const [bulkStagedFiles, setBulkStagedFiles] = useState<File[]>([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [showScanOptions, setShowScanOptions] = useState(false);
 
   // Check eBay connection status
   useEffect(() => {
@@ -528,7 +529,7 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
                 Bulk
               </button>
             </div>
-            <p className="text-xs text-muted">
+            <p className="hidden sm:block text-xs text-muted">
               {cameraMode === "listing"
                 ? "Tap shutter after each card — camera stays live, shots queue in background."
                 : cameraMode === "identify"
@@ -545,6 +546,17 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
           </div>
         )}
 
+        {/* Mobile options toggle */}
+        <div className="lg:hidden flex justify-end mb-2">
+          <button
+            onClick={() => setShowScanOptions(v => !v)}
+            className="btn text-xs flex items-center gap-1.5"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            {showScanOptions ? "Hide options" : "Scan options"}
+          </button>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
             {inputMode === "upload" ? (
@@ -559,7 +571,7 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
               />
             )}
           </div>
-          <aside className="lg:w-80 flex flex-col gap-3">
+          <aside className={`lg:w-80 flex-col gap-3 ${showScanOptions ? "flex" : "hidden"} lg:flex`}>
             <div>
               <label className="label">Default game (if undetected)</label>
               <select
@@ -774,17 +786,19 @@ export default function Scanner({ batchId }: ScannerProps = {}) {
         </div>
       )}
 
-      <CardList
-        cards={cards}
-        onChange={updateCard}
-        onRemove={removeCard}
-        onRelookup={relookupCard}
-        onVerify={(id) => {
-          const idx = cards.findIndex((c) => c.id === id);
-          if (idx >= 0) setVerifyIndex(idx);
-        }}
-        ebayConnected={ebayConnected}
-      />
+      <div className="pb-4 lg:pb-0">
+        <CardList
+          cards={cards}
+          onChange={updateCard}
+          onRemove={removeCard}
+          onRelookup={relookupCard}
+          onVerify={(id) => {
+            const idx = cards.findIndex((c) => c.id === id);
+            if (idx >= 0) setVerifyIndex(idx);
+          }}
+          ebayConnected={ebayConnected}
+        />
+      </div>
 
       {/* Card verification modal */}
       {verifyIndex !== null && cards[verifyIndex] && (
