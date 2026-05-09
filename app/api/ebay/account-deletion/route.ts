@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createHmac } from 'crypto'
+import { createHash } from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
-  // eBay requires: SHA-256(challengeCode + verificationToken + endpoint)
-  const hash = createHmac('sha256', verificationToken)
+  // eBay requires plain SHA-256(challengeCode + verificationToken + endpoint)
+  const hash = createHash('sha256')
     .update(challengeCode + verificationToken + endpoint)
     .digest('hex')
 
