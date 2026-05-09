@@ -57,7 +57,11 @@ export async function updateSession(
   } = await supabase.auth.getUser();
 
   // Public routes that don't require auth
-  const publicPaths = ["/", "/login", "/signup", "/auth", "/terms", "/privacy", "/acceptable-use"];
+  const publicPaths = ["/", "/login", "/signup", "/auth", "/terms", "/privacy", "/acceptable-use",
+    "/api/ebay/account-deletion",  // eBay compliance webhook — called by eBay, no user session
+    "/api/ebay/webhooks",           // eBay platform notifications — called by eBay, no user session
+    "/api/stripe/webhook",          // Stripe webhook — called by Stripe, no user session
+  ];
   const isPublic = publicPaths.some(
     (p) => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + "/")
   );
