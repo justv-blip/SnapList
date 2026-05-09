@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 // eBay Marketplace Account Deletion notification handler
 // Required by eBay Developer Program for all production apps that persist eBay user data
 // https://developer.ebay.com/marketplace-account-deletion
@@ -39,6 +34,11 @@ export async function GET(req: NextRequest) {
 // POST — actual deletion notification from eBay
 export async function POST(req: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const body = await req.json()
 
     // eBay sends: { metadata: { topic }, notification: { data: { username, userId, eiasToken } } }
